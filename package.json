@@ -1,0 +1,36 @@
+{
+  "engines": {
+    "node": "24"
+  },
+  "name": "schapwachtserver",
+  "version": "1.0.0",
+  "description": "API van SchapWacht",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "db:migrate": "node db/migrate.js",
+    "db:reset": "node db/migrate.js --reset",
+    "db:seed": "node db/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.16.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "supertest": "^7.3.1",
+    "vitest": "^5.0.5"
+  }
+}
