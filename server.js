@@ -6,11 +6,20 @@
 //  poort opengaat.
 //
 //    kern/config.js   omgeving, database, toegestane herkomsten
-//    kern/db.js       verbindingspool en queryhulpjes
-//    kern/hulp.js     validatie en kleine hulpfuncties
+//    kern/db.js       de Sequelize-verbinding
+//    kern/hulp.js     id's, fouttypes, kleine hulpfuncties
+//    kern/controle.js controle op wat er binnenkomt
+//    kern/token.js    inlogtokens maken en lezen
+//    kern/pogingen.js mislukte inlogpogingen tellen
 //    kern/app.js      zet Express in elkaar
 //
+//    modellen/        de tabellen en hun relaties
+//    middleware/      afscherming van routes
+//    diensten/        wat er mag en wat er gebeurt
+//
 //    routes/health.js   controle of API en database leven
+//    routes/auth.js     registreren, inloggen, uitloggen
+//    routes/winkel.js   de eigen winkel en haar medewerkers
 //
 //  Express kijkt routes van boven naar beneden af, dus de volgorde
 //  in kern/app.js moet kloppen.

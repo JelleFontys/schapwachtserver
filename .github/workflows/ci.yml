@@ -1,0 +1,37 @@
+name: CI
+
+# De API wordt niet gebouwd: Dokploy doet dat zelf met Nixpacks. Deze
+# pipeline controleert alleen of de code klopt, zodat een fout opvalt
+# voordat hij op de server staat.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read # lezen is genoeg, deze pipeline publiceert niets
+
+jobs:
+  controle:
+    runs-on: ubuntu-latest
+
+    env:
+      # De tests praten niet met een echte database. Met NODE_ENV=test
+      # valt de config terug op testwaarden, zodat er geen geheimen in
+      # de pipeline nodig zijn.
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          cache: npm
+      # --ignore-scripts: install-scripts van packages draaien niet mee.
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm test

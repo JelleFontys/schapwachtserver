@@ -9,6 +9,8 @@ import helmet from "helmet";
 
 import { HERKOMSTEN, OMGEVING } from "./config.js";
 import healthRoutes from "../routes/health.js";
+import authRoutes from "../routes/auth.js";
+import winkelRoutes from "../routes/winkel.js";
 
 export function maakApp() {
   const app = express();
@@ -29,9 +31,13 @@ export function maakApp() {
       credentials: true,
     }),
   );
-  app.use(express.json());
+  // Een grens op de hoeveelheid JSON die binnen mag komen. Zonder
+  // grens kan iemand de server plat leggen met één enorm verzoek.
+  app.use(express.json({ limit: "100kb" }));
 
   app.use("/api/health", healthRoutes);
+  app.use("/api/auth", authRoutes);
+  app.use("/api/winkel", winkelRoutes);
 
   // Route bestaat niet.
   app.use((req, res) => {
