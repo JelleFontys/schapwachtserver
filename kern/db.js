@@ -1,68 +1,51 @@
-// Verbindingspool naar MySQL en een paar hulpjes om queries te doen.
+// Verbinding met MySQL via Sequelize.
 //
-// Alleen de bestanden in routes/ en db/ gebruiken deze functies.
-// Er zit geen ORM tussen: de SQL die draait is de SQL die je schrijft.
+// Sequelize zet alle waarden als parameters in de query, dus SQL-injectie
+// kan niet via de modellen. Schrijf daarom nooit zelf een query met
+// sjabloonstrings, maar gebruik de modellen uit modellen/.
 
-import mysql from "mysql2/promise";
+import { Sequelize } from "sequelize";
 
 import { DATABASE_URL, OMGEVING } from "./config.js";
 
 // node --watch herstart de server bij elke wijziging. Zonder deze
-// bewaarplek op globalThis komt er dan elke keer een nieuwe pool bij
-// en raakt MySQL door zijn verbindingen heen.
+// bewaarplek op globalThis komt er dan elke keer een nieuwe verbinding
+// bij en raakt MySQL door zijn verbindingen heen.
 const globaal = globalThis;
 
-export const pool =
-  globaal.schapwachtPool ??
-  mysql.createPool({
-    uri: DATABASE_URL,
-    waitForConnections: true,
-    connectionLimit: 10,
-    // Datums als tekst teruggeven. Een houdbaarheidsdatum heeft geen
-    // tijd en geen tijdzone; als JavaScript er een Date van maakt kan
-    // hij een dag verschuiven.
-    dateStrings: ["DATE"],
+export const sequelize =
+  globaal.schapwachtDb ??
+  new Sequelize(DATABASE_URL, {
+    dialect: "mysql",
+    // Alleen loggen tijdens ontwikkelen; in productie staan de queries
+    // anders in je logbestanden, inclusief de waarden erin.
+    logging: OMGEVING === "development" ? console.log : false,
+    pool: { max: 10, min: 0, idle: 10_000 },
+    define: {
+      // Tabel- en kolomnamen in snake_case, zoals in de database.
+      underscored: true,
+      freezeTableName: true,
+      createdAt: "aangemaakt_op",
+      updatedAt: "bijgewerkt_op",
+    },
+    dialectOptions: {
+      // Een houdbaarheidsdatum heeft geen tijd en geen tijdzone. Als
+      // JavaScript er een Date van maakt kan hij een dag verschuiven,
+      // dus we houden hem als tekst: "2026-03-12".
+      dateStrings: true,
+      typeCast: true,
+    },
+    timezone: "+00:00",
   });
 
 if (OMGEVING !== "production") {
-  globaal.schapwachtPool = pool;
-}
-
-/** Voert een query uit en geeft de rijen terug. */
-export async function query(sql, waarden = []) {
-  const [rijen] = await pool.execute(sql, waarden);
-  return rijen;
-}
-
-/** Voert een query uit die hooguit één rij oplevert. */
-export async function queryEen(sql, waarden = []) {
-  const rijen = await query(sql, waarden);
-  return rijen[0] ?? null;
-}
-
-/**
- * Voert een reeks queries uit binnen één transactie.
- * Gaat er iets mis, dan wordt alles teruggedraaid.
- */
-export async function inTransactie(werk) {
-  const verbinding = await pool.getConnection();
-  try {
-    await verbinding.beginTransaction();
-    const resultaat = await werk(verbinding);
-    await verbinding.commit();
-    return resultaat;
-  } catch (fout) {
-    await verbinding.rollback();
-    throw fout;
-  } finally {
-    verbinding.release();
-  }
+  globaal.schapwachtDb = sequelize;
 }
 
 /** Controleert of de database antwoordt. */
 export async function databaseLeeft() {
   try {
-    await pool.query("SELECT 1");
+    await sequelize.authenticate();
     return true;
   } catch {
     return false;

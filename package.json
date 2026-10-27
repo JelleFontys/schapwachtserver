@@ -13,8 +13,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "db:migrate": "node db/migrate.js",
-    "db:reset": "node db/migrate.js --reset",
+    "db:migreer": "node db/migreer.js",
+    "db:terug": "node db/migreer.js --terug",
+    "db:reset": "node db/migreer.js --reset",
     "db:seed": "node db/seed.js"
   },
   "dependencies": {
@@ -24,7 +25,9 @@
     "express": "^5.3.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
-    "mysql2": "^3.16.0"
+    "mysql2": "^3.16.0",
+    "sequelize": "^6.37.8",
+    "umzug": "^3.8.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
