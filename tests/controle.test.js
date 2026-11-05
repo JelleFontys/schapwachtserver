@@ -54,3 +54,37 @@ describe("controle.uitnodigingscode", () => {
     expect(() => controle.uitnodigingscode("code;DROP")).toThrow();
   });
 });
+
+describe("controle.geheelGetal", () => {
+  const grenzen = { min: 1, max: 26 };
+
+  it("laat een getal binnen de grenzen door", () => {
+    expect(controle.geheelGetal(4, "Rijen", grenzen)).toBe(4);
+  });
+
+  it("neemt een getal als tekst aan, zoals een formulier het soms stuurt", () => {
+    expect(controle.geheelGetal("4", "Rijen", grenzen)).toBe(4);
+  });
+
+  it.each([0, 27, -1])("weigert %j omdat het buiten de grenzen valt", (waarde) => {
+    expect(() => controle.geheelGetal(waarde, "Rijen", grenzen)).toThrow(/tussen 1 en 26/);
+  });
+
+  it.each([2.5, "vier", "", null, undefined, NaN])("weigert %j", (waarde) => {
+    expect(() => controle.geheelGetal(waarde, "Rijen", grenzen)).toThrow();
+  });
+});
+
+describe("controle.optioneleTekst", () => {
+  it("haalt spaties weg", () => {
+    expect(controle.optioneleTekst("  Stelling B ", "Naam")).toBe("Stelling B");
+  });
+
+  it.each(["", "   ", null, undefined])("maakt van %j een lege naam", (waarde) => {
+    expect(controle.optioneleTekst(waarde, "Naam")).toBeNull();
+  });
+
+  it("weigert te lange tekst", () => {
+    expect(() => controle.optioneleTekst("x".repeat(121), "Naam", { max: 120 })).toThrow();
+  });
+});

@@ -11,6 +11,8 @@ import { HERKOMSTEN, OMGEVING } from "./config.js";
 import healthRoutes from "../routes/health.js";
 import authRoutes from "../routes/auth.js";
 import winkelRoutes from "../routes/winkel.js";
+import plattegrondRoutes from "../routes/plattegronden.js";
+import vakRoutes from "../routes/vakken.js";
 
 export function maakApp() {
   const app = express();
@@ -38,6 +40,8 @@ export function maakApp() {
   app.use("/api/health", healthRoutes);
   app.use("/api/auth", authRoutes);
   app.use("/api/winkel", winkelRoutes);
+  app.use("/api/plattegronden", plattegrondRoutes);
+  app.use("/api/vakken", vakRoutes);
 
   // Route bestaat niet.
   app.use((req, res) => {
@@ -51,7 +55,7 @@ export function maakApp() {
   // hebben. Details van een onverwachte fout gaan nooit naar de gebruiker.
   app.use((fout, req, res, _next) => {
     if (fout.status) {
-      return res.status(fout.status).json({ fout: fout.message });
+      return res.status(fout.status).json({ fout: fout.message, ...fout.gegevens });
     }
 
     console.error("Onverwachte fout:", fout);

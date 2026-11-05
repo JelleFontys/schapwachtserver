@@ -5,12 +5,19 @@ import { randomUUID } from "node:crypto";
 /** Nieuw id voor een rij in de database. */
 export const nieuwId = () => randomUUID();
 
-/** Fout met een HTTP-status erbij, zodat de foutafhandeling hem herkent. */
+/**
+ * Fout met een HTTP-status erbij, zodat de foutafhandeling hem herkent.
+ *
+ * `gegevens` komt naast de melding in het antwoord, voor als de
+ * front-end meer moet weten dan alleen dát het niet mag. Bijvoorbeeld
+ * wélke vakken er in de weg zitten.
+ */
 export class HttpFout extends Error {
-  constructor(status, bericht) {
+  constructor(status, bericht, gegevens = undefined) {
     super(bericht);
     this.name = "HttpFout";
     this.status = status;
+    this.gegevens = gegevens;
   }
 }
 

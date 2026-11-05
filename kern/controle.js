@@ -53,6 +53,35 @@ export function wachtwoord(waarde) {
   return waarde;
 }
 
+/**
+ * Geheel getal binnen grenzen. Een getal als tekst ("4") mag ook,
+ * omdat een formulierveld dat soms zo verstuurt.
+ */
+export function geheelGetal(waarde, naam, { min, max }) {
+  const getal = typeof waarde === "string" && waarde.trim() !== "" ? Number(waarde) : waarde;
+
+  if (typeof getal !== "number" || !Number.isInteger(getal)) {
+    throw ongeldig(`${naam} moet een heel getal zijn.`);
+  }
+  if (getal < min || getal > max) {
+    throw ongeldig(`${naam} moet tussen ${min} en ${max} liggen.`);
+  }
+
+  return getal;
+}
+
+/** Tekst die leeg mag zijn. Leeg of alleen spaties wordt null. */
+export function optioneleTekst(waarde, naam, { max = 190 } = {}) {
+  if (waarde === undefined || waarde === null) return null;
+  if (typeof waarde !== "string") throw ongeldig(`${naam} moet tekst zijn.`);
+
+  const schoon = waarde.trim();
+  if (schoon === "") return null;
+  if (schoon.length > max) throw ongeldig(`${naam} mag maximaal ${max} tekens lang zijn.`);
+
+  return schoon;
+}
+
 /** Uitnodigingscode: hoofdletters en cijfers, streepje mag. */
 export function uitnodigingscode(waarde) {
   const schoon = tekst(waarde, "Uitnodigingscode", { max: 40 }).toUpperCase();

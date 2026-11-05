@@ -80,7 +80,13 @@ describe("POST /api/auth/uitloggen", () => {
 });
 
 describe("beveiligde routes", () => {
-  it.each(["/api/auth/ik", "/api/winkel", "/api/winkel/medewerkers"])(
+  it.each([
+    "/api/auth/ik",
+    "/api/winkel",
+    "/api/winkel/medewerkers",
+    "/api/plattegronden",
+    "/api/plattegronden/11111111-1111-4111-8111-111111111111",
+  ])(
     "geeft 401 op %s zonder token",
     async (pad) => {
       const r = await request(app).get(pad);
@@ -88,6 +94,16 @@ describe("beveiligde routes", () => {
       expect(r.status).toBe(401);
     },
   );
+
+  it.each([
+    ["post", "/api/plattegronden"],
+    ["patch", "/api/plattegronden/11111111-1111-4111-8111-111111111111"],
+    ["patch", "/api/vakken/11111111-1111-4111-8111-111111111111"],
+  ])("geeft 401 op %s %s zonder token", async (methode, pad) => {
+    const r = await request(app)[methode](pad).send({ naam: "Winkel" });
+
+    expect(r.status).toBe(401);
+  });
 
   it("geeft 401 bij een token zonder Bearer ervoor", async () => {
     const r = await request(app).get("/api/auth/ik").set("Authorization", "losse-tekst");
