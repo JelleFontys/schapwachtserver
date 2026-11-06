@@ -98,7 +98,11 @@ describe("beveiligde routes", () => {
   it.each([
     ["post", "/api/plattegronden"],
     ["patch", "/api/plattegronden/11111111-1111-4111-8111-111111111111"],
-    ["patch", "/api/vakken/11111111-1111-4111-8111-111111111111"],
+    ["post", "/api/plattegronden/11111111-1111-4111-8111-111111111111/rand"],
+    ["post", "/api/plattegronden/11111111-1111-4111-8111-111111111111/stellingen"],
+    ["get", "/api/stellingen/11111111-1111-4111-8111-111111111111"],
+    ["patch", "/api/stellingen/11111111-1111-4111-8111-111111111111"],
+    ["delete", "/api/stellingen/11111111-1111-4111-8111-111111111111"],
   ])("geeft 401 op %s %s zonder token", async (methode, pad) => {
     const r = await request(app)[methode](pad).send({ naam: "Winkel" });
 

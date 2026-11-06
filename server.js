@@ -20,10 +20,11 @@
 //    routes/health.js   controle of API en database leven
 //    routes/auth.js     registreren, inloggen, uitloggen
 //    routes/winkel.js   de eigen winkel en haar medewerkers
-//    routes/plattegronden.js  plattegronden en hun raster
-//    routes/vakken.js         een vak een naam geven
+//    routes/plattegronden.js  de vloer, de randen en nieuwe stellingen
+//    routes/stellingen.js     een stelling bekijken, aanpassen, weghalen
 //
-//    kern/raster.js   rekenwerk aan het raster, zonder database
+//    kern/raster.js   rekenwerk aan de vloer, zonder database
+//    kern/stelling.js rekenwerk aan kanten, rijen en vakken, zonder database
 //
 //  Express kijkt routes van boven naar beneden af, dus de volgorde
 //  in kern/app.js moet kloppen.

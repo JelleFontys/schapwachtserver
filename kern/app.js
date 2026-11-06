@@ -12,7 +12,7 @@ import healthRoutes from "../routes/health.js";
 import authRoutes from "../routes/auth.js";
 import winkelRoutes from "../routes/winkel.js";
 import plattegrondRoutes from "../routes/plattegronden.js";
-import vakRoutes from "../routes/vakken.js";
+import stellingRoutes from "../routes/stellingen.js";
 
 export function maakApp() {
   const app = express();
@@ -41,7 +41,7 @@ export function maakApp() {
   app.use("/api/auth", authRoutes);
   app.use("/api/winkel", winkelRoutes);
   app.use("/api/plattegronden", plattegrondRoutes);
-  app.use("/api/vakken", vakRoutes);
+  app.use("/api/stellingen", stellingRoutes);
 
   // Route bestaat niet.
   app.use((req, res) => {

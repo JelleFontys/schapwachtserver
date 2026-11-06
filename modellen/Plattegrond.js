@@ -1,8 +1,8 @@
 import { DataTypes, Model } from "sequelize";
 
 /**
- * Een plattegrond is een raster van vakken, bijvoorbeeld "Winkel" of
- * "Magazijn". De afmetingen zijn instelbaar.
+ * De vloer van een ruimte, van bovenaf gezien, als raster van hokjes.
+ * Bijvoorbeeld "Winkel" of "Magazijn". Op de vloer staan stellingen.
  */
 export class Plattegrond extends Model {}
 
@@ -19,11 +19,13 @@ export function maakPlattegrond(sequelize) {
         allowNull: false,
         validate: { notEmpty: { msg: "Een plattegrond moet een naam hebben." } },
       },
+      /** Hoogte van de vloer in hokjes. */
       rijen: {
         type: DataTypes.SMALLINT.UNSIGNED,
         allowNull: false,
         validate: { min: { args: [1], msg: "Een raster heeft minstens één rij." } },
       },
+      /** Breedte van de vloer in hokjes. */
       kolommen: {
         type: DataTypes.SMALLINT.UNSIGNED,
         allowNull: false,

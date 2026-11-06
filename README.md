@@ -24,20 +24,51 @@ server.js           startpunt: bouwt de app en start hem
 kern/
   config.js         omgeving, database, toegestane herkomsten
   db.js             de Sequelize-verbinding
-  hulp.js           id's, fouttypes, validatie
+  hulp.js           id's, fouttypes, kleine hulpfuncties
+  controle.js       controle op wat er binnenkomt
+  token.js          inlogtokens maken en lezen
+  pogingen.js       mislukte inlogpogingen tellen
+  raster.js         rekenwerk aan de vloer (zonder database)
+  stelling.js       rekenwerk aan kanten, rijen en vakken (zonder database)
   app.js            zet Express in elkaar (zonder te starten)
-modellen/
-  index.js          koppelt de modellen en legt de relaties
-  Winkel.js         en Gebruiker, Plattegrond, Vak,
-                    Productgroep, Product, Partij
-routes/
-  health.js         controle of API en database leven
+modellen/           de tabellen en hun relaties
+middleware/         afscherming van routes
+diensten/           wat er mag en wat er gebeurt
+routes/             de API
 db/
   migraties/        genummerde migratiebestanden
   migreer.js        voert ze uit en houdt bij wat al gedaan is
   seed.js           testdata voor de demo
-tests/              unit- en integratietests
+tests/              unit- en routetests
 ```
+
+## Hoe een winkel is opgebouwd
+
+```
+winkel ─< plattegrond ─< stelling ─< stellingkant ─< plank ─< vak ─< partij
+```
+
+- **Plattegrond**: de vloer van bovenaf, als raster van hokjes. Begint op 10 breed en 20 hoog en groeit met de plusjes aan elke kant.
+- **Stelling**: een rechthoek van hokjes op de vloer.
+- **Stellingkant**: links of rechts (bij een liggende stelling boven of onder), met een eigen naam, bijvoorbeeld "Koek en snoep" en "Chips". Een stelling tegen de muur heeft er één.
+- **Plank**: een rij aan een kant. Rij 1 is de bovenste.
+- **Vak**: één plek op een plank, waar een product staat. Plek 1 is de meest linkse.
+- **Partij**: dit product, met deze datum, in dit vak.
+
+## API
+
+| | |
+|---|---|
+| `POST /api/auth/registreer`, `/inloggen`, `/uitloggen` · `GET /api/auth/ik` | Accounts |
+| `GET /api/winkel` · `GET /api/winkel/medewerkers` | De eigen winkel |
+| `GET`, `POST /api/plattegronden` | Lijst, nieuwe plattegrond (alleen een naam) |
+| `GET`, `PATCH /api/plattegronden/:id` | Met stellingen ophalen, hernoemen |
+| `POST /api/plattegronden/:id/rand` | Rij of kolom erbij of eraf aan één kant |
+| `POST /api/plattegronden/:id/stellingen` | Stelling neerzetten |
+| `GET`, `PATCH`, `DELETE /api/stellingen/:id` | Stelling bekijken, inrichten, weghalen |
+
+Alles behalve registreren en inloggen vraagt een token. Aanmaken,
+aanpassen en weghalen mag alleen de leidinggevende.
 
 Het starten zit in `server.js` en het bouwen in `kern/app.js`. Daardoor
 kunnen tests de app rechtstreeks aanroepen zonder dat er een poort opengaat.

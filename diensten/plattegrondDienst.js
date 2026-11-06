@@ -1,21 +1,23 @@
-// Plattegronden en hun vakken.
+// Plattegronden: de vloer van een ruimte, met de stellingen erop.
 //
 // Elke functie krijgt het winkelId mee als eerste argument, en elke
 // query filtert erop. Een plattegrond van een andere winkel bestaat
 // voor deze code niet: je krijgt 404, niet 403. Een 403 zou verklappen
 // dat er onder dat id wél iets staat.
 
-import { Op, UniqueConstraintError } from "sequelize";
+import { UniqueConstraintError } from "sequelize";
 
-import { sequelize, Plattegrond, Vak, Partij, Product } from "../modellen/index.js";
-import { HttpFout, nietGevonden } from "../kern/hulp.js";
+import { sequelize, Plattegrond, Stelling, Stellingkant, Plank, Vak } from "../modellen/index.js";
+import { HttpFout, nietGevonden, ongeldig } from "../kern/hulp.js";
 import * as controle from "../kern/controle.js";
 import {
+  STANDAARD,
   MAX_RIJEN,
   MAX_KOLOMMEN,
-  positie,
-  valtBuiten,
-  ontbrekendePosities,
+  RANDEN,
+  ACTIES,
+  raaktRand,
+  randWijziging,
 } from "../kern/raster.js";
 
 const naarBuiten = (plattegrond) => ({
@@ -25,38 +27,73 @@ const naarBuiten = (plattegrond) => ({
   kolommen: plattegrond.kolommen,
 });
 
-const vakNaarBuiten = (vak) => ({
-  id: vak.id,
-  rij: vak.rij,
-  kolom: vak.kolom,
-  positie: positie(vak.rij, vak.kolom),
-  naam: vak.naam,
-});
+const kantNaarBuiten = (kant) =>
+  kant
+    ? {
+        naam: kant.naam,
+        rijen: [...kant.planken]
+          .sort((a, b) => a.nummer - b.nummer)
+          .map((plank) => plank.vakken.length),
+      }
+    : null;
 
-const controleerRijen = (waarde) =>
-  controle.geheelGetal(waarde, "Aantal rijen", { min: 1, max: MAX_RIJEN });
+/** Een stelling zoals de API hem teruggeeft. */
+export function stellingNaarBuiten(stelling) {
+  const kant = (welke) => stelling.kanten.find((k) => k.kant === welke);
+  return {
+    id: stelling.id,
+    x: stelling.x,
+    y: stelling.y,
+    breedte: stelling.breedte,
+    hoogte: stelling.hoogte,
+    links: kantNaarBuiten(kant("LINKS")),
+    rechts: kantNaarBuiten(kant("RECHTS")),
+  };
+}
 
-const controleerKolommen = (waarde) =>
-  controle.geheelGetal(waarde, "Aantal kolommen", { min: 1, max: MAX_KOLOMMEN });
+/** Alles wat nodig is om een stelling met zijn kanten en vakken te laden. */
+export const stellingMetInhoud = [
+  {
+    model: Stellingkant,
+    as: "kanten",
+    include: [
+      {
+        model: Plank,
+        as: "planken",
+        include: [{ model: Vak, as: "vakken", attributes: ["id", "positie"] }],
+      },
+    ],
+  },
+];
+
+/** Hoe een stelling heet in een melding: de namen van de kanten. */
+export function stellingNaam(stelling) {
+  const namen = stelling.kanten.map((k) => k.naam);
+  return namen.length > 0 ? namen.join(" / ") : "zonder naam";
+}
 
 const naamBestaatAl = () =>
   new HttpFout(409, "Er is in deze winkel al een plattegrond met deze naam.");
 
-/** Een plattegrond van deze winkel, of 404. */
-async function zoek(winkelId, id, transaction) {
+/**
+ * Een plattegrond van deze winkel, of 404.
+ *
+ * Binnen een transactie wordt de rij vergrendeld tot de transactie
+ * klaar is. Alles wat aan de vloer of de stellingen erop verandert,
+ * loopt via deze vergrendeling. Zo kunnen twee mensen niet tegelijk een
+ * stelling op dezelfde plek zetten.
+ */
+export async function zoek(winkelId, id, transaction) {
   const plattegrond = await Plattegrond.findOne({
     where: { id, winkelId },
     transaction,
-    // Bij het aanpassen van het raster mag niemand anders tegelijk
-    // hetzelfde raster aanpassen, anders tellen we vakken die een
-    // ander verzoek net aan het weghalen is.
     lock: transaction ? transaction.LOCK.UPDATE : undefined,
   });
   if (!plattegrond) throw nietGevonden("Deze plattegrond bestaat niet.");
   return plattegrond;
 }
 
-/** Alle plattegronden van de winkel, zonder vakken. */
+/** Alle plattegronden van de winkel, zonder stellingen. */
 export async function lijst(winkelId) {
   const plattegronden = await Plattegrond.findAll({
     where: { winkelId },
@@ -68,48 +105,30 @@ export async function lijst(winkelId) {
   return plattegronden.map(naarBuiten);
 }
 
-/** Eén plattegrond met al zijn vakken, rij voor rij. */
+/** Eén plattegrond met al zijn stellingen. */
 export async function haal(winkelId, id) {
   const plattegrond = await zoek(winkelId, id);
-  const vakken = await Vak.findAll({
+  const stellingen = await Stelling.findAll({
     where: { plattegrondId: plattegrond.id },
+    include: stellingMetInhoud,
     order: [
-      ["rij", "ASC"],
-      ["kolom", "ASC"],
+      ["y", "ASC"],
+      ["x", "ASC"],
     ],
   });
 
-  return { ...naarBuiten(plattegrond), vakken: vakken.map(vakNaarBuiten) };
+  return { ...naarBuiten(plattegrond), stellingen: stellingen.map(stellingNaarBuiten) };
 }
 
 /**
- * Nieuwe plattegrond. Alle vakken worden meteen aangemaakt, ook de
- * lege. Een partij moet straks naar een vak kunnen verwijzen, en dan
- * moet dat vak al bestaan.
+ * Nieuwe plattegrond: alleen een naam. Hij begint als een lege vloer
+ * van standaardgrootte, en wordt daarna met de plusjes groter.
  */
 export async function maak(winkelId, invoer) {
   const naam = controle.tekst(invoer.naam, "Naam", { max: 120 });
-  const rijen = controleerRijen(invoer.rijen);
-  const kolommen = controleerKolommen(invoer.kolommen);
 
   try {
-    const plattegrond = await sequelize.transaction(async (t) => {
-      const nieuw = await Plattegrond.create(
-        { winkelId, naam, rijen, kolommen },
-        { transaction: t },
-      );
-
-      await Vak.bulkCreate(
-        ontbrekendePosities([], rijen, kolommen).map((plek) => ({
-          ...plek,
-          plattegrondId: nieuw.id,
-        })),
-        { transaction: t },
-      );
-
-      return nieuw;
-    });
-
+    const plattegrond = await Plattegrond.create({ winkelId, naam, ...STANDAARD });
     return haal(winkelId, plattegrond.id);
   } catch (fout) {
     if (fout instanceof UniqueConstraintError) throw naamBestaatAl();
@@ -117,39 +136,14 @@ export async function maak(winkelId, invoer) {
   }
 }
 
-/**
- * Naam of afmetingen aanpassen.
- *
- * Vergroten is altijd veilig: er komen lege vakken bij. Verkleinen
- * haalt vakken weg, en als daar nog producten in liggen raken die hun
- * plek kwijt. Dat gebeurt nooit ongemerkt: zonder `losmaken: true`
- * weigert de server, en vertelt hij welke vakken en producten het
- * betreft. Pas als de gebruiker dat gezien heeft en bevestigt, gaat het
- * door. De producten worden losgemaakt, niet verwijderd.
- */
-export async function wijzig(winkelId, id, invoer) {
-  // Eerst alles controleren, dan pas de database in.
-  const naam = invoer.naam === undefined ? undefined : controle.tekst(invoer.naam, "Naam", { max: 120 });
-  const rijen = invoer.rijen === undefined ? undefined : controleerRijen(invoer.rijen);
-  const kolommen = invoer.kolommen === undefined ? undefined : controleerKolommen(invoer.kolommen);
-  const losmaken = invoer.losmaken === true;
+/** Een plattegrond een andere naam geven. */
+export async function hernoem(winkelId, id, invoer) {
+  const naam = controle.tekst(invoer.naam, "Naam", { max: 120 });
 
   try {
-    await sequelize.transaction(async (t) => {
-      const plattegrond = await zoek(winkelId, id, t);
-
-      const nieuweRijen = rijen ?? plattegrond.rijen;
-      const nieuweKolommen = kolommen ?? plattegrond.kolommen;
-
-      if (nieuweRijen !== plattegrond.rijen || nieuweKolommen !== plattegrond.kolommen) {
-        await pasRasterAan(plattegrond, nieuweRijen, nieuweKolommen, losmaken, t);
-      }
-
-      if (naam !== undefined) plattegrond.naam = naam;
-      plattegrond.rijen = nieuweRijen;
-      plattegrond.kolommen = nieuweKolommen;
-      await plattegrond.save({ transaction: t });
-    });
+    const plattegrond = await zoek(winkelId, id);
+    plattegrond.naam = naam;
+    await plattegrond.save();
   } catch (fout) {
     if (fout instanceof UniqueConstraintError) throw naamBestaatAl();
     throw fout;
@@ -158,86 +152,61 @@ export async function wijzig(winkelId, id, invoer) {
   return haal(winkelId, id);
 }
 
-async function pasRasterAan(plattegrond, rijen, kolommen, losmaken, transaction) {
-  const vakken = await Vak.findAll({
-    where: { plattegrondId: plattegrond.id },
-    transaction,
-  });
+/**
+ * Een rij of kolom erbij of eraf aan één rand van de vloer.
+ *
+ * Eraf kan alleen als er op die rand geen stelling staat. Er wordt
+ * nooit stilletjes een stelling afgeknipt of weggehaald; dan moet
+ * iemand die stelling eerst zelf weghalen.
+ */
+export async function pasRandAan(winkelId, id, invoer) {
+  const { rand, actie } = invoer;
+  if (!RANDEN.includes(rand)) throw ongeldig(`Rand moet een van deze zijn: ${RANDEN.join(", ")}.`);
+  if (!ACTIES.includes(actie)) throw ongeldig("Actie moet 'erbij' of 'eraf' zijn.");
 
-  const weg = vakken.filter((vak) => valtBuiten(vak, rijen, kolommen));
+  await sequelize.transaction(async (t) => {
+    const plattegrond = await zoek(winkelId, id, t);
+    const wijziging = randWijziging(rand, actie);
 
-  if (weg.length > 0) {
-    const wegIds = weg.map((vak) => vak.id);
+    const rijen = plattegrond.rijen + wijziging.rijen;
+    const kolommen = plattegrond.kolommen + wijziging.kolommen;
 
-    // Alleen actieve partijen tellen. Een afgemelde partij is
-    // geschiedenis; die mag zijn vak kwijtraken zonder dat iemand
-    // daarvoor gewaarschuwd hoeft te worden.
-    const geraakt = await Partij.findAll({
-      where: { vakId: { [Op.in]: wegIds }, status: "ACTIEF" },
-      include: [{ model: Product, attributes: ["naam"] }],
-      transaction,
-    });
+    if (rijen < 1 || kolommen < 1) {
+      throw ongeldig("Kleiner kan niet: er moet minstens één rij en één kolom overblijven.");
+    }
+    if (rijen > MAX_RIJEN || kolommen > MAX_KOLOMMEN) {
+      throw ongeldig(`Groter kan niet: maximaal ${MAX_KOLOMMEN} breed en ${MAX_RIJEN} hoog.`);
+    }
 
-    if (geraakt.length > 0 && !losmaken) {
-      throw new HttpFout(
-        409,
-        geraakt.length === 1
-          ? "Bij dit verkleinen raakt 1 product zijn plek kwijt."
-          : `Bij dit verkleinen raken ${geraakt.length} producten hun plek kwijt.`,
-        { geraakt: beschrijfGeraakt(weg, geraakt), aantal: geraakt.length },
+    if (actie === "eraf") {
+      const stellingen = await Stelling.findAll({
+        where: { plattegrondId: plattegrond.id },
+        include: [{ model: Stellingkant, as: "kanten", attributes: ["naam"] }],
+        transaction: t,
+      });
+      const inDeWeg = stellingen.find((s) =>
+        raaktRand(s, rand, plattegrond.rijen, plattegrond.kolommen),
+      );
+      if (inDeWeg) {
+        throw new HttpFout(
+          409,
+          `Tegen deze rand staat een stelling (${stellingNaam(inDeWeg)}). Haal die eerst weg.`,
+          { stellingId: inDeWeg.id },
+        );
+      }
+    }
+
+    if (wijziging.schuifX !== 0 || wijziging.schuifY !== 0) {
+      await Stelling.increment(
+        { x: wijziging.schuifX, y: wijziging.schuifY },
+        { where: { plattegrondId: plattegrond.id }, transaction: t },
       );
     }
 
-    // Losmaken, niet verwijderen. De database zou dit ook zelf doen
-    // (ON DELETE SET NULL), maar hier staat het zichtbaar in de code,
-    // zodat niemand hoeft te weten hoe de koppeling is ingesteld om te
-    // begrijpen wat er gebeurt.
-    await Partij.update(
-      { vakId: null },
-      { where: { vakId: { [Op.in]: wegIds } }, transaction },
-    );
-    await Vak.destroy({ where: { id: { [Op.in]: wegIds } }, transaction });
-  }
-
-  const blijven = vakken.filter((vak) => !valtBuiten(vak, rijen, kolommen));
-  const nieuw = ontbrekendePosities(blijven, rijen, kolommen);
-
-  if (nieuw.length > 0) {
-    await Vak.bulkCreate(
-      nieuw.map((plek) => ({ ...plek, plattegrondId: plattegrond.id })),
-      { transaction },
-    );
-  }
-}
-
-/** Per vak dat wegvalt: waar het zit, hoe het heet, wat erin ligt. */
-function beschrijfGeraakt(weg, geraakt) {
-  return weg
-    .map((vak) => ({
-      positie: positie(vak.rij, vak.kolom),
-      naam: vak.naam,
-      producten: geraakt
-        .filter((partij) => partij.vakId === vak.id)
-        .map((partij) => partij.Product?.naam ?? "Onbekend product"),
-    }))
-    .filter((vak) => vak.producten.length > 0);
-}
-
-/**
- * Een vak een naam geven, of de naam weghalen met een lege waarde.
- * Het vak moet bij een plattegrond van deze winkel horen.
- */
-export async function hernoemVak(winkelId, vakId, invoer) {
-  const naam = controle.optioneleTekst(invoer.naam, "Naam", { max: 120 });
-
-  const vak = await Vak.findOne({
-    where: { id: vakId },
-    include: [{ model: Plattegrond, where: { winkelId }, attributes: [] }],
+    plattegrond.rijen = rijen;
+    plattegrond.kolommen = kolommen;
+    await plattegrond.save({ transaction: t });
   });
-  if (!vak) throw nietGevonden("Dit vak bestaat niet.");
 
-  vak.naam = naam;
-  await vak.save();
-
-  return vakNaarBuiten(vak);
+  return haal(winkelId, id);
 }

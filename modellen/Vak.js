@@ -1,6 +1,10 @@
 import { DataTypes, Model } from "sequelize";
 
-/** Eén vak in een stelling, op een vaste plek in het raster. */
+/**
+ * Eén plek op een plank, waar een product staat. Plek 1 is de meest
+ * linkse. Hier hangt een partij aan: dit product, met deze datum,
+ * staat hier.
+ */
 export class Vak extends Model {}
 
 export function maakVak(sequelize) {
@@ -11,17 +15,9 @@ export function maakVak(sequelize) {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      rij: { type: DataTypes.SMALLINT.UNSIGNED, allowNull: false },
-      kolom: { type: DataTypes.SMALLINT.UNSIGNED, allowNull: false },
-      /** Herkenbare naam voor in de winkel, bijvoorbeeld "Stelling B, plank 3". */
-      naam: { type: DataTypes.STRING(120), allowNull: true },
+      positie: { type: DataTypes.SMALLINT.UNSIGNED, allowNull: false },
     },
-    {
-      sequelize,
-      modelName: "Vak",
-      tableName: "vak",
-      timestamps: false,
-    },
+    { sequelize, modelName: "Vak", tableName: "vak", timestamps: false },
   );
 
   return Vak;

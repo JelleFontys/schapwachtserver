@@ -1,72 +1,84 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  MAX_RIJEN,
-  rijLetter,
-  positie,
-  valtBuiten,
-  ontbrekendePosities,
+  STANDAARD,
+  binnenRaster,
+  overlappen,
+  raaktRand,
+  randWijziging,
 } from "../kern/raster.js";
 
-describe("positie van een vak", () => {
-  it("noemt linksboven A1", () => {
-    expect(positie(1, 1)).toBe("A1");
-  });
+const stelling = (x, y, breedte, hoogte) => ({ x, y, breedte, hoogte });
 
-  it("gebruikt een letter voor de rij en een nummer voor de kolom", () => {
-    expect(positie(3, 12)).toBe("C12");
-  });
-
-  it("komt tot Z en niet verder", () => {
-    expect(rijLetter(MAX_RIJEN)).toBe("Z");
+describe("standaardgrootte", () => {
+  it("is 10 breed en 20 hoog", () => {
+    expect(STANDAARD).toEqual({ kolommen: 10, rijen: 20 });
   });
 });
 
-describe("valtBuiten", () => {
-  it("houdt een vak binnen het raster", () => {
-    expect(valtBuiten({ rij: 2, kolom: 3 }, 2, 3)).toBe(false);
+describe("binnenRaster", () => {
+  it("accepteert een stelling die precies tot de rand loopt", () => {
+    expect(binnenRaster(stelling(9, 13, 2, 8), 20, 10)).toBe(true);
   });
 
-  it("laat een vak in een weggehaalde rij vallen", () => {
-    expect(valtBuiten({ rij: 3, kolom: 1 }, 2, 6)).toBe(true);
+  it("weigert een stelling die er rechts uitsteekt", () => {
+    expect(binnenRaster(stelling(10, 1, 2, 1), 20, 10)).toBe(false);
   });
 
-  it("laat een vak in een weggehaalde kolom vallen", () => {
-    expect(valtBuiten({ rij: 1, kolom: 7 }, 4, 6)).toBe(true);
+  it("weigert een stelling die er onder uitsteekt", () => {
+    expect(binnenRaster(stelling(1, 15, 1, 7), 20, 10)).toBe(false);
+  });
+
+  it("weigert een plek voor de eerste kolom", () => {
+    expect(binnenRaster(stelling(0, 1, 1, 1), 20, 10)).toBe(false);
   });
 });
 
-describe("ontbrekendePosities", () => {
-  it("geeft bij een nieuw raster elke plek", () => {
-    expect(ontbrekendePosities([], 2, 3)).toHaveLength(6);
+describe("overlappen", () => {
+  it("ziet twee stellingen over elkaar", () => {
+    expect(overlappen(stelling(2, 3, 2, 8), stelling(3, 5, 2, 2))).toBe(true);
   });
 
-  it("geeft de plekken rij voor rij, van links naar rechts", () => {
-    expect(ontbrekendePosities([], 2, 2)).toEqual([
-      { rij: 1, kolom: 1 },
-      { rij: 1, kolom: 2 },
-      { rij: 2, kolom: 1 },
-      { rij: 2, kolom: 2 },
-    ]);
+  // Twee stellingen rug aan rug of in elkaars verlengde mogen gewoon.
+  it("laat stellingen die alleen tegen elkaar aan staan door", () => {
+    expect(overlappen(stelling(2, 3, 2, 8), stelling(4, 3, 2, 8))).toBe(false);
+    expect(overlappen(stelling(2, 3, 2, 8), stelling(2, 11, 2, 4))).toBe(false);
   });
 
-  // Bij vergroten blijven de bestaande vakken staan, met hun naam en
-  // wat erin ligt. Alleen de nieuwe rand komt erbij.
-  it("geeft bij vergroten alleen de nieuwe rand", () => {
-    const bestaand = ontbrekendePosities([], 2, 2);
-    const nieuw = ontbrekendePosities(bestaand, 3, 3);
+  it("ziet een stelling die helemaal binnen een andere ligt", () => {
+    expect(overlappen(stelling(1, 1, 5, 5), stelling(2, 2, 1, 1))).toBe(true);
+  });
+});
 
-    expect(nieuw).toEqual([
-      { rij: 1, kolom: 3 },
-      { rij: 2, kolom: 3 },
-      { rij: 3, kolom: 1 },
-      { rij: 3, kolom: 2 },
-      { rij: 3, kolom: 3 },
-    ]);
+describe("raaktRand", () => {
+  const s = stelling(1, 18, 8, 3); // tegen de linker- en onderrand van 10x20
+
+  it("ziet welke randen de stelling raakt", () => {
+    expect(raaktRand(s, "links", 20, 10)).toBe(true);
+    expect(raaktRand(s, "onder", 20, 10)).toBe(true);
   });
 
-  it("geeft niets als het raster even groot blijft", () => {
-    const bestaand = ontbrekendePosities([], 4, 6);
-    expect(ontbrekendePosities(bestaand, 4, 6)).toEqual([]);
+  it("ziet welke randen hij niet raakt", () => {
+    expect(raaktRand(s, "boven", 20, 10)).toBe(false);
+    expect(raaktRand(s, "rechts", 20, 10)).toBe(false);
+  });
+});
+
+describe("randWijziging", () => {
+  it("onder erbij: één rij meer, niets schuift", () => {
+    expect(randWijziging("onder", "erbij")).toEqual({ rijen: 1, kolommen: 0, schuifX: 0, schuifY: 0 });
+  });
+
+  // De nieuwe rij wordt rij 1, dus alles wat er al stond moet één omlaag.
+  it("boven erbij: één rij meer en alles schuift één omlaag", () => {
+    expect(randWijziging("boven", "erbij")).toEqual({ rijen: 1, kolommen: 0, schuifX: 0, schuifY: 1 });
+  });
+
+  it("links eraf: één kolom minder en alles schuift één naar links", () => {
+    expect(randWijziging("links", "eraf")).toEqual({ rijen: 0, kolommen: -1, schuifX: -1, schuifY: 0 });
+  });
+
+  it("rechts eraf: één kolom minder, niets schuift", () => {
+    expect(randWijziging("rechts", "eraf")).toEqual({ rijen: 0, kolommen: -1, schuifX: 0, schuifY: 0 });
   });
 });

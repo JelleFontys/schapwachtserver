@@ -8,6 +8,9 @@ import { sequelize } from "../kern/db.js";
 import { maakWinkel } from "./Winkel.js";
 import { maakGebruiker } from "./Gebruiker.js";
 import { maakPlattegrond } from "./Plattegrond.js";
+import { maakStelling } from "./Stelling.js";
+import { maakStellingkant } from "./Stellingkant.js";
+import { maakPlank } from "./Plank.js";
 import { maakVak } from "./Vak.js";
 import { maakProductgroep } from "./Productgroep.js";
 import { maakProduct } from "./Product.js";
@@ -16,6 +19,9 @@ import { maakPartij } from "./Partij.js";
 export const Winkel = maakWinkel(sequelize);
 export const Gebruiker = maakGebruiker(sequelize);
 export const Plattegrond = maakPlattegrond(sequelize);
+export const Stelling = maakStelling(sequelize);
+export const Stellingkant = maakStellingkant(sequelize);
+export const Plank = maakPlank(sequelize);
 export const Vak = maakVak(sequelize);
 export const Productgroep = maakProductgroep(sequelize);
 export const Product = maakProduct(sequelize);
@@ -36,8 +42,19 @@ Productgroep.belongsTo(Winkel, { foreignKey: "winkelId" });
 Winkel.hasMany(Product, { foreignKey: "winkelId", onDelete: "CASCADE" });
 Product.belongsTo(Winkel, { foreignKey: "winkelId" });
 
-Plattegrond.hasMany(Vak, { foreignKey: "plattegrondId", onDelete: "CASCADE" });
-Vak.belongsTo(Plattegrond, { foreignKey: "plattegrondId" });
+// De vloer en wat erop staat: plattegrond > stelling > kant > rij > vak.
+// Weg met de bovenste betekent weg met alles eronder.
+Plattegrond.hasMany(Stelling, { foreignKey: "plattegrondId", as: "stellingen", onDelete: "CASCADE" });
+Stelling.belongsTo(Plattegrond, { foreignKey: "plattegrondId" });
+
+Stelling.hasMany(Stellingkant, { foreignKey: "stellingId", as: "kanten", onDelete: "CASCADE" });
+Stellingkant.belongsTo(Stelling, { foreignKey: "stellingId" });
+
+Stellingkant.hasMany(Plank, { foreignKey: "stellingkantId", as: "planken", onDelete: "CASCADE" });
+Plank.belongsTo(Stellingkant, { foreignKey: "stellingkantId" });
+
+Plank.hasMany(Vak, { foreignKey: "plankId", as: "vakken", onDelete: "CASCADE" });
+Vak.belongsTo(Plank, { foreignKey: "plankId" });
 
 // Een productgroep weghalen mag: de producten blijven bestaan en
 // vallen dan terug op de standaard afprijsregel.
@@ -48,7 +65,8 @@ Product.hasMany(Partij, { foreignKey: "productId", onDelete: "CASCADE" });
 Partij.belongsTo(Product, { foreignKey: "productId" });
 
 // Een vak weghalen mag de partij niet weggooien: die raakt alleen zijn
-// plek kwijt en komt in de lijst "zonder locatie".
+// plek kwijt en komt in de lijst "zonder locatie". Dat geldt ook als
+// er een hele stelling verdwijnt.
 Vak.hasMany(Partij, { foreignKey: "vakId", onDelete: "SET NULL" });
 Partij.belongsTo(Vak, { foreignKey: "vakId" });
 
