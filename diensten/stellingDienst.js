@@ -22,7 +22,7 @@ import {
 import { HttpFout, nietGevonden, ongeldig } from "../kern/hulp.js";
 import * as controle from "../kern/controle.js";
 import { MAX_KOLOMMEN, MAX_RIJEN, binnenRaster, overlappen } from "../kern/raster.js";
-import { kantLabels, controleerKanten, verschilRijen, plekNaam } from "../kern/stelling.js";
+import { controleerKanten, verschilRijen, plekNaam } from "../kern/stelling.js";
 import { zoek, stellingNaarBuiten, stellingMetInhoud } from "./plattegrondDienst.js";
 
 const KANTEN = ["LINKS", "RECHTS"];
@@ -81,7 +81,8 @@ async function maakVakken(reeksen, transaction) {
 
 /**
  * Nieuwe stelling op een plattegrond. Hij moet binnen het raster
- * vallen en mag niet over een andere stelling heen liggen.
+ * vallen, mag niet over een andere stelling heen liggen en is
+ * maximaal 2 hokjes dik.
  */
 export async function maak(winkelId, plattegrondId, invoer) {
   const vlak = {
@@ -90,7 +91,8 @@ export async function maak(winkelId, plattegrondId, invoer) {
     breedte: controle.geheelGetal(invoer.breedte, "Breedte", { min: 1, max: MAX_KOLOMMEN }),
     hoogte: controle.geheelGetal(invoer.hoogte, "Hoogte", { min: 1, max: MAX_RIJEN }),
   };
-  const kanten = controleerKanten(invoer, kantLabels(vlak.breedte, vlak.hoogte));
+  // Ook de dikte: een stelling van 3 hokjes dik komt er niet in.
+  const kanten = controleerKanten(invoer, vlak);
 
   const id = await sequelize.transaction(async (t) => {
     const plattegrond = await zoek(winkelId, plattegrondId, t);
@@ -133,7 +135,7 @@ export async function wijzig(winkelId, id, invoer) {
     // aan dezelfde plattegrond gewerkt wordt.
     await zoek(winkelId, stelling.plattegrondId, t);
 
-    const kanten = controleerKanten(invoer, kantLabels(stelling.breedte, stelling.hoogte));
+    const kanten = controleerKanten(invoer, stelling);
 
     // Eerst alles uitrekenen, dan pas iets veranderen. Zo kan de server
     // weigeren voordat er ook maar één vak weg is.

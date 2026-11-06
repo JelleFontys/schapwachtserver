@@ -15,41 +15,71 @@ export const MAX_RIJEN_PER_KANT = 12;
 export const MAX_VAKKEN_PER_RIJ = 30;
 
 /**
- * Hoe de twee kanten heten. Bij een staande stelling (hoger dan breed)
- * is dat links en rechts, bij een liggende boven en onder. In de
- * database heten ze altijd LINKS en RECHTS; dit gaat alleen over wat
- * de gebruiker te lezen krijgt.
+ * Een stelling is maximaal 2 hokjes dik. Eén hokje dik is een stelling
+ * met één kant, bijvoorbeeld tegen de muur. Twee hokjes dik is een
+ * stelling met twee kanten, rug aan rug. Dikker bestaat in een winkel
+ * niet: dan zijn het twee stellingen.
  */
-export function kantLabels(breedte, hoogte) {
-  return hoogte >= breedte
+export const MAX_DIKTE = 2;
+
+/** De dikte is de korte kant van de rechthoek. */
+export function dikte(vlak) {
+  return Math.min(vlak.breedte, vlak.hoogte);
+}
+
+/**
+ * Hoe de kanten heten, in de woorden die de gebruiker te lezen krijgt.
+ *
+ * - 1 dik: er is maar één kant, en die heet gewoon "de stelling".
+ * - 2 dik en staand (hoger dan breed): linkerkant en rechterkant.
+ * - 2 dik en liggend (breder dan hoog): bovenkant en onderkant.
+ *
+ * In de database heten ze altijd LINKS en RECHTS; een stelling van één
+ * dik heeft alleen LINKS.
+ */
+export function kantLabels(vlak) {
+  if (dikte(vlak) === 1) return { LINKS: "stelling", RECHTS: null };
+  return vlak.hoogte >= vlak.breedte
     ? { LINKS: "linkerkant", RECHTS: "rechterkant" }
     : { LINKS: "bovenkant", RECHTS: "onderkant" };
 }
 
+export function controleerDikte(vlak) {
+  if (dikte(vlak) > MAX_DIKTE) {
+    throw ongeldig(`Een stelling is maximaal ${MAX_DIKTE} hokjes dik.`);
+  }
+}
+
 /**
- * Controleert beide kanten. Een kant zonder rijen bestaat niet (een
- * stelling tegen de muur), maar minstens één kant moet een rij hebben.
+ * Controleert de kanten tegen de dikte van de stelling: 1 dik heeft
+ * precies één kant, 2 dik precies twee. Elke kant heeft een naam en
+ * minstens één rij.
  */
-export function controleerKanten(invoer, labels) {
-  const kanten = {
+export function controleerKanten(invoer, vlak) {
+  controleerDikte(vlak);
+  const labels = kantLabels(vlak);
+
+  if (dikte(vlak) === 1) {
+    if (invoer?.rechts !== undefined && invoer?.rechts !== null) {
+      throw ongeldig("Een stelling van één hokje dik heeft maar één kant.");
+    }
+    return { LINKS: controleerKant(invoer?.links, labels.LINKS), RECHTS: null };
+  }
+
+  return {
     LINKS: controleerKant(invoer?.links, labels.LINKS),
     RECHTS: controleerKant(invoer?.rechts, labels.RECHTS),
   };
-
-  if (!kanten.LINKS && !kanten.RECHTS) {
-    throw ongeldig("Een stelling heeft minstens één kant met één rij nodig.");
-  }
-
-  return kanten;
 }
 
 function controleerKant(kant, label) {
-  if (kant === undefined || kant === null) return null;
-  if (typeof kant !== "object") throw ongeldig(`De ${label} is niet goed doorgegeven.`);
+  if (kant === undefined || kant === null || typeof kant !== "object") {
+    throw ongeldig(`De ${label} ontbreekt.`);
+  }
 
   const rijen = kant.rijen ?? [];
   if (!Array.isArray(rijen)) throw ongeldig(`De rijen van de ${label} moeten een lijst zijn.`);
-  if (rijen.length === 0) return null;
+  if (rijen.length === 0) throw ongeldig(`De ${label} heeft minstens één rij nodig.`);
   if (rijen.length > MAX_RIJEN_PER_KANT) {
     throw ongeldig(`De ${label} kan maximaal ${MAX_RIJEN_PER_KANT} rijen hebben.`);
   }
