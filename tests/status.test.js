@@ -1,7 +1,3 @@
-// SW-31: de statusberekening, met de grenswaarden.
-//
-// Elke test zet "vandaag" vast, zodat hij morgen nog hetzelfde zegt.
-
 import { describe, it, expect } from "vitest";
 
 import {
@@ -88,8 +84,6 @@ describe("rekenen met datums", () => {
     expect(dagenTussen("2026-10-30", "2026-11-02")).toBe(3);
   });
 
-  // In de nacht van 25 oktober 2026 gaat de klok een uur terug. Een dag
-  // van 25 uur mag niet als 1,04 dag tellen.
   it("telt goed over de overgang naar wintertijd", () => {
     expect(dagenTussen("2026-10-24", "2026-10-26")).toBe(2);
   });
@@ -98,7 +92,6 @@ describe("rekenen met datums", () => {
     expect(verschuif("2028-02-28", 1)).toBe("2028-02-29");
   });
 
-  // 23:30 UTC op 11 november is al 12 november in Nederland.
   it("vandaag is de Nederlandse datum, niet die van de server", () => {
     expect(vandaag(new Date("2026-11-11T23:30:00Z"))).toBe("2026-11-12");
   });

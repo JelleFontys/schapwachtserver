@@ -1,10 +1,3 @@
-// Productgroepen en hun afprijsregel (SW-30).
-//
-// De afprijsregel is het aantal dagen voor de houdbaarheidsdatum dat een
-// product oranje wordt. Zuivel is twee dagen voor de datum, houdbare
-// koekjes misschien twee weken. Een product zonder productgroep valt
-// terug op de standaardwaarde.
-
 import { UniqueConstraintError, fn, col } from "sequelize";
 
 import { Productgroep, Product } from "../modellen/index.js";
@@ -79,10 +72,6 @@ export async function wijzig(winkelId, id, invoer) {
   return naarBuiten(groep);
 }
 
-/**
- * Een productgroep weghalen. De producten blijven bestaan en vallen
- * terug op de standaardregel; de database zet hun productgroep op leeg.
- */
 export async function verwijder(winkelId, id) {
   const groep = await zoek(winkelId, id);
   await groep.destroy();

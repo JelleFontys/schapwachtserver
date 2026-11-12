@@ -1,8 +1,3 @@
-// Koppelt alle modellen aan de verbinding en legt de relaties vast.
-//
-// Importeer modellen altijd hiervandaan, niet rechtstreeks uit hun
-// eigen bestand: pas hier zijn de relaties gelegd.
-
 import { sequelize } from "../kern/db.js";
 
 import { maakWinkel } from "./Winkel.js";
@@ -27,9 +22,6 @@ export const Productgroep = maakProductgroep(sequelize);
 export const Product = maakProduct(sequelize);
 export const Partij = maakPartij(sequelize);
 
-// ── Relaties ────────────────────────────────────────────
-// Alles hangt aan een winkel. Verdwijnt die, dan verdwijnt de rest mee.
-
 Winkel.hasMany(Gebruiker, { foreignKey: "winkelId", onDelete: "CASCADE" });
 Gebruiker.belongsTo(Winkel, { foreignKey: "winkelId" });
 
@@ -42,8 +34,6 @@ Productgroep.belongsTo(Winkel, { foreignKey: "winkelId" });
 Winkel.hasMany(Product, { foreignKey: "winkelId", onDelete: "CASCADE" });
 Product.belongsTo(Winkel, { foreignKey: "winkelId" });
 
-// De vloer en wat erop staat: plattegrond > stelling > kant > rij > vak.
-// Weg met de bovenste betekent weg met alles eronder.
 Plattegrond.hasMany(Stelling, { foreignKey: "plattegrondId", as: "stellingen", onDelete: "CASCADE" });
 Stelling.belongsTo(Plattegrond, { foreignKey: "plattegrondId" });
 
@@ -56,17 +46,12 @@ Plank.belongsTo(Stellingkant, { foreignKey: "stellingkantId" });
 Plank.hasMany(Vak, { foreignKey: "plankId", as: "vakken", onDelete: "CASCADE" });
 Vak.belongsTo(Plank, { foreignKey: "plankId" });
 
-// Een productgroep weghalen mag: de producten blijven bestaan en
-// vallen dan terug op de standaard afprijsregel.
 Productgroep.hasMany(Product, { foreignKey: "productgroepId", onDelete: "SET NULL" });
 Product.belongsTo(Productgroep, { foreignKey: "productgroepId" });
 
 Product.hasMany(Partij, { foreignKey: "productId", onDelete: "CASCADE" });
 Partij.belongsTo(Product, { foreignKey: "productId" });
 
-// Een vak weghalen mag de partij niet weggooien: die raakt alleen zijn
-// plek kwijt en komt in de lijst "zonder locatie". Dat geldt ook als
-// er een hele stelling verdwijnt.
 Vak.hasMany(Partij, { foreignKey: "vakId", onDelete: "SET NULL" });
 Partij.belongsTo(Vak, { foreignKey: "vakId" });
 

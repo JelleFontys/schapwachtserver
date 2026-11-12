@@ -1,9 +1,5 @@
 import { DataTypes, Model } from "sequelize";
 
-/**
- * Een winkel. Alle gegevens hangen hieraan, zodat gebruikers nooit
- * gegevens van een andere winkel kunnen zien.
- */
 export class Winkel extends Model {}
 
 export function maakWinkel(sequelize) {

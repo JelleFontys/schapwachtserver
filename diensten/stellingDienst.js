@@ -1,12 +1,3 @@
-// Stellingen op een plattegrond: aanmaken, aanpassen en weghalen.
-//
-// Een stelling aanpassen kan vakken laten verdwijnen: een rij minder,
-// minder producten op een rij, of een hele kant weg. Ligt er in zo'n
-// vak nog een product, dan raakt dat zijn plek kwijt. Dat gebeurt
-// nooit ongemerkt. Zonder `losmaken: true` weigert de server en noemt
-// hij welke producten op welke plek het betreft. De producten worden
-// daarna losgemaakt, nooit verwijderd.
-
 import { Op } from "sequelize";
 
 import {
@@ -29,7 +20,6 @@ import { ernstigste } from "../kern/status.js";
 
 const KANTEN = ["LINKS", "RECHTS"];
 
-/** Een stelling van deze winkel met alles erin, of 404. */
 async function zoekStelling(winkelId, id, transaction) {
   const stelling = await Stelling.findOne({
     where: { id },
@@ -48,12 +38,6 @@ export async function haal(winkelId, id) {
   return { ...stellingNaarBuiten(stelling), plattegrondId: stelling.plattegrondId };
 }
 
-/**
- * Een stelling opengeklapt (SW-27): per kant alle rijen van boven naar
- * beneden, en in elk vak de partijen die er liggen, vroegste datum
- * eerst. Elk vak, elke kant en de stelling krijgen de ernstigste status
- * van wat erin ligt (SW-31, SW-32).
- */
 export async function inhoud(winkelId, id) {
   const stelling = await zoekStelling(winkelId, id);
   const vakIds = stelling.kanten.flatMap((k) => k.planken.flatMap((p) => p.vakken.map((v) => v.id)));
@@ -102,7 +86,6 @@ export async function inhoud(winkelId, id) {
   };
 }
 
-/** Een kant met zijn rijen en vakken aanmaken. */
 async function maakKant(stellingId, kant, spec, transaction) {
   const nieuweKant = await Stellingkant.create(
     { stellingId, kant, naam: spec.naam },
@@ -135,11 +118,6 @@ async function maakVakken(reeksen, transaction) {
   if (vakken.length > 0) await Vak.bulkCreate(vakken, { transaction });
 }
 
-/**
- * Nieuwe stelling op een plattegrond. Hij moet binnen het raster
- * vallen, mag niet over een andere stelling heen liggen en is
- * maximaal 2 hokjes dik.
- */
 export async function maak(winkelId, plattegrondId, invoer) {
   const vlak = {
     x: controle.geheelGetal(invoer.x, "x", { min: 1, max: MAX_KOLOMMEN }),
@@ -147,7 +125,6 @@ export async function maak(winkelId, plattegrondId, invoer) {
     breedte: controle.geheelGetal(invoer.breedte, "Breedte", { min: 1, max: MAX_KOLOMMEN }),
     hoogte: controle.geheelGetal(invoer.hoogte, "Hoogte", { min: 1, max: MAX_RIJEN }),
   };
-  // Ook de dikte: een stelling van 3 hokjes dik komt er niet in.
   const kanten = controleerKanten(invoer, vlak);
 
   const id = await sequelize.transaction(async (t) => {
@@ -178,23 +155,15 @@ export async function maak(winkelId, plattegrondId, invoer) {
   return haal(winkelId, id);
 }
 
-/**
- * Namen, rijen en vakken van een stelling aanpassen. Plek en grootte
- * op de vloer blijven hetzelfde.
- */
 export async function wijzig(winkelId, id, invoer) {
   const losmaken = invoer.losmaken === true;
 
   await sequelize.transaction(async (t) => {
     const stelling = await zoekStelling(winkelId, id, t);
-    // Dezelfde vergrendeling als bij de vloer, zodat er niet tegelijk
-    // aan dezelfde plattegrond gewerkt wordt.
     await zoek(winkelId, stelling.plattegrondId, t);
 
     const kanten = controleerKanten(invoer, stelling);
 
-    // Eerst alles uitrekenen, dan pas iets veranderen. Zo kan de server
-    // weigeren voordat er ook maar één vak weg is.
     const plan = { vakkenWeg: [], plankenWeg: [], kantenWeg: [], plekken: new Map(), daarna: [] };
 
     for (const kant of KANTEN) {
@@ -231,7 +200,6 @@ export async function wijzig(winkelId, id, invoer) {
   return haal(winkelId, id);
 }
 
-/** Wat er aan één bestaande kant verandert, in het plan zetten. */
 function planKant(plan, bestaand, nieuw, transaction) {
   const planken = [...bestaand.planken].sort((a, b) => a.nummer - b.nummer);
   const plankMetNummer = (nummer) => planken.find((p) => p.nummer === nummer);
@@ -277,14 +245,6 @@ function zetWeg(plan, kant, plank, vakken) {
   }
 }
 
-/**
- * Producten in vakken die verdwijnen: weigeren als niemand heeft
- * bevestigd, anders losmaken.
- *
- * Alleen actieve partijen tellen mee voor de weigering. Een afgemelde
- * partij is geschiedenis; die mag zijn plek kwijtraken zonder dat
- * iemand daarvoor gewaarschuwd hoeft te worden.
- */
 async function maakPlekkenVrij(plan, losmaken, transaction) {
   if (plan.vakkenWeg.length === 0) return;
 
@@ -310,17 +270,12 @@ async function maakPlekkenVrij(plan, losmaken, transaction) {
     );
   }
 
-  // Losmaken, niet verwijderen. De database zou dit bij het weghalen
-  // van de vakken ook zelf doen (ON DELETE SET NULL), maar hier staat
-  // het zichtbaar in de code, zodat je niet hoeft te weten hoe de
-  // koppeling is ingesteld om te snappen wat er gebeurt.
   await Partij.update(
     { vakId: null },
     { where: { vakId: { [Op.in]: plan.vakkenWeg } }, transaction },
   );
 }
 
-/** Een stelling weghalen. Zelfde regel: producten worden losgemaakt. */
 export async function verwijder(winkelId, id, { losmaken = false } = {}) {
   await sequelize.transaction(async (t) => {
     const stelling = await zoekStelling(winkelId, id, t);

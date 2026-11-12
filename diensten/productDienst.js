@@ -1,10 +1,3 @@
-// Het assortiment: producten met naam, productgroep en barcode (SW-25),
-// en opzoeken op barcode na het scannen (SW-37).
-//
-// Een product heeft geen houdbaarheidsdatum en geen vaste plek. De datum
-// hoort bij een partij, en een product kan op meer plekken tegelijk
-// liggen. "Waar hoort dit?" beantwoorden we daarom met waar het nu ligt.
-
 import { Op, UniqueConstraintError } from "sequelize";
 
 import { Product, Productgroep, Partij } from "../modellen/index.js";
@@ -31,7 +24,6 @@ async function zoek(winkelId, id) {
   return product;
 }
 
-/** De productgroep moet van dezelfde winkel zijn, of leeg. */
 async function controleerGroep(winkelId, productgroepId) {
   if (productgroepId === undefined) return undefined;
   if (productgroepId === null || productgroepId === "") return null;
@@ -101,14 +93,6 @@ export async function wijzig(winkelId, id, invoer) {
   return haal(winkelId, id);
 }
 
-/**
- * Een product weghalen kan alleen als het nog nooit gebruikt is.
- *
- * Met de database-koppeling zou weghalen ook alle partijen van dit
- * product weggooien, ook de afgemelde. Dan verdwijnt er stil
- * geschiedenis uit het overzicht van weggegooide producten (SW-39). Is
- * een product al gebruikt, pas dan liever de naam aan.
- */
 export async function verwijder(winkelId, id) {
   const product = await zoek(winkelId, id);
   const gebruikt = await Partij.count({ where: { productId: product.id } });
@@ -121,11 +105,6 @@ export async function verwijder(winkelId, id) {
   await product.destroy();
 }
 
-/**
- * Een gescand product opzoeken (SW-37). Geeft het product terug en waar
- * het nu ligt, of `product: null` als de barcode onbekend is. Dat laatste
- * is geen fout: dan maakt de gebruiker het product aan (SW-38).
- */
 export async function opBarcode(winkelId, code) {
   const barcode = controle.barcode(code);
   if (!barcode) throw ongeldig("Vul een barcode in.");
@@ -139,7 +118,6 @@ export async function opBarcode(winkelId, code) {
     order: [["houdbaarTot", "ASC"]],
   });
 
-  // Eén regel per vak, met de vroegste datum die daar ligt.
   const perVak = new Map();
   for (const partij of partijen) {
     if (perVak.has(partij.vakId)) continue;

@@ -1,15 +1,7 @@
-// Waar ligt iets? Van een vak terug naar de plattegrond.
-//
-// Een partij weet alleen zijn vak. Om te zeggen "Winkel, Koek en snoep,
-// rij 2, vak 3" moet je via de plank, de kant en de stelling terug naar
-// de plattegrond. Die weg staat hier één keer, zodat de werklijst, de
-// scanner en de stellingen hetzelfde zeggen.
-
 import { Plattegrond, Stelling, Stellingkant, Plank, Vak } from "../modellen/index.js";
 import { nietGevonden } from "../kern/hulp.js";
 import { plekNaam } from "../kern/stelling.js";
 
-/** De include om vanaf een partij of vak de hele plek mee te laden. */
 export function plekInclude({ verplicht = false, winkelId } = {}) {
   return {
     model: Vak,
@@ -43,7 +35,6 @@ export function plekInclude({ verplicht = false, winkelId } = {}) {
   };
 }
 
-/** Een geladen vak als leesbare plek, of null als er geen vak is. */
 export function plekVan(vak) {
   if (!vak) return null;
   const plank = vak.Plank;
@@ -63,11 +54,6 @@ export function plekVan(vak) {
   };
 }
 
-/**
- * Een vak van deze winkel, met de hele weg naar de plattegrond, of 404.
- * Wie een product in een vak zet, moet niet een vak van een andere
- * winkel kunnen kiezen door een id te raden.
- */
 export async function zoekVak(winkelId, vakId, transaction) {
   const vak = await Vak.findOne({
     where: { id: vakId },

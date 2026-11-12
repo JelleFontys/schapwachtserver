@@ -1,6 +1,3 @@
-// Productgroepen en hun afprijsregel (SW-30). Bekijken mag iedereen,
-// aanpassen alleen de leidinggevende (SW-40).
-
 import { Router } from "express";
 
 import { vangFouten } from "../kern/hulp.js";

@@ -31,9 +31,6 @@ describe("tokens", () => {
   });
 
   it("weigert een token zonder ondertekening", () => {
-    // alg "none" betekent: geen ondertekening. Zou de server zelf
-    // mogen kiezen welk algoritme hij accepteert, dan kon iedereen zo
-    // een token verzinnen. Daarom staat HS256 vast in kern/token.js.
     const kop = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
     const inhoud = Buffer.from(
       JSON.stringify({ sub: gebruiker.id, winkelId: gebruiker.winkelId, rol: "LEIDINGGEVENDE" }),

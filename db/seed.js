@@ -1,13 +1,3 @@
-// Testdata voor de demo.
-//
-// Maakt één winkel met een leidinggevende en een medewerker, een
-// plattegrond met drie stellingen, productgroepen met hun eigen
-// afprijsregel, producten en partijen met datums die alle drie de
-// statussen laten zien: ruim houdbaar, bijna afprijzen en over de datum.
-//
-// De datums staan ten opzichte van vandaag, zodat de demo over een maand
-// nog klopt. De seed ruimt eerst op, dus hij kan meerdere keren draaien.
-
 import bcrypt from "bcryptjs";
 
 import { OMGEVING } from "../kern/config.js";
@@ -26,11 +16,6 @@ import {
   Partij,
 } from "../modellen/index.js";
 
-/**
- * Een stelling met zijn kanten, rijen en vakken. Geeft per kant een
- * lijst rijen terug met daarin de vak-id's, zodat de partijen
- * hieronder op een plek gezet kunnen worden.
- */
 async function maakStelling(plattegrondId, vlak, kanten, transaction) {
   const stelling = await Stelling.create({ plattegrondId, ...vlak }, { transaction });
   const vakken = {};
@@ -63,10 +48,7 @@ async function main() {
     throw new Error("De seed mag niet in productie draaien, die gooit alle data weg.");
   }
 
-  // Alles gebeurt in één transactie: gaat er halverwege iets mis, dan
-  // blijft de database niet half leeggehaald achter.
   await sequelize.transaction(async (t) => {
-    // Opruimen in omgekeerde volgorde van de koppelingen.
     for (const model of [
       Partij,
       Vak,
@@ -87,8 +69,6 @@ async function main() {
       { transaction: t },
     );
 
-    // Eén keer hashen voor beide gebruikers: dit is demodata, geen
-    // echte accounts.
     const wachtwoordHash = await bcrypt.hash("Demo1234!", 10);
     await Gebruiker.bulkCreate(
       [
@@ -124,8 +104,6 @@ async function main() {
       groepen.set(naam, groep.id);
     }
 
-    // De vloer: 10 breed, 20 hoog, met twee staande stellingen in het
-    // midden en één liggende stelling tegen de onderste muur.
     const plattegrond = await Plattegrond.create(
       { winkelId: winkel.id, naam: "Winkel", rijen: 20, kolommen: 10 },
       { transaction: t },
@@ -175,13 +153,8 @@ async function main() {
       producten.set(naam, product.id);
     }
 
-    // product, kant, rij, vak, dagen tot de houdbaarheidsdatum, aantal.
-    // Twee partijen melk op dezelfde plek met verschillende datums: dat
-    // is precies het geval waar dit systeem om gebouwd is.
     const plek = (kant, rij, vak) => vakken[kant][rij - 1][vak - 1];
     const partijen = [
-      // Eén dag over de datum: rood. Op de datum zelf zou hij oranje
-      // zijn, want tot en met die dag mag hij nog verkocht worden.
       ["Halfvolle melk 1L", plek("Zuivel en vleeswaren", 1, 1), -1, 8],
       ["Halfvolle melk 1L", plek("Zuivel en vleeswaren", 1, 1), 6, 12],
       ["Volle yoghurt 500g", plek("Zuivel en vleeswaren", 2, 1), 9, 10],
@@ -189,7 +162,6 @@ async function main() {
       ["Tarwebrood heel", plek("Brood", 1, 1), 1, 4],
       ["Chocoladekoekjes 300g", plek("Koek en snoep", 2, 3), 40, 24],
       ["Sinaasappelsap 1L", plek("Dranken", 1, 2), 120, 18],
-      // Eén partij zonder plek, zoals na het weghalen van een stelling.
       ["Chocoladekoekjes 300g", null, 5, 3],
     ].map(([naam, vakId, dagen, aantal]) => ({
       productId: producten.get(naam),

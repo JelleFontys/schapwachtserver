@@ -39,7 +39,6 @@ describe("overlappen", () => {
     expect(overlappen(stelling(2, 3, 2, 8), stelling(3, 5, 2, 2))).toBe(true);
   });
 
-  // Twee stellingen rug aan rug of in elkaars verlengde mogen gewoon.
   it("laat stellingen die alleen tegen elkaar aan staan door", () => {
     expect(overlappen(stelling(2, 3, 2, 8), stelling(4, 3, 2, 8))).toBe(false);
     expect(overlappen(stelling(2, 3, 2, 8), stelling(2, 11, 2, 4))).toBe(false);
@@ -69,7 +68,6 @@ describe("randWijziging", () => {
     expect(randWijziging("onder", "erbij")).toEqual({ rijen: 1, kolommen: 0, schuifX: 0, schuifY: 0 });
   });
 
-  // De nieuwe rij wordt rij 1, dus alles wat er al stond moet één omlaag.
   it("boven erbij: één rij meer en alles schuift één omlaag", () => {
     expect(randWijziging("boven", "erbij")).toEqual({ rijen: 1, kolommen: 0, schuifX: 0, schuifY: 1 });
   });

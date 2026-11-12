@@ -1,9 +1,5 @@
 import { DataTypes, Model } from "sequelize";
 
-/**
- * Een artikel in het assortiment. Bevat géén houdbaarheidsdatum:
- * die hoort bij een partij.
- */
 export class Product extends Model {}
 
 export function maakProduct(sequelize) {

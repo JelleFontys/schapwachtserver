@@ -133,8 +133,6 @@ describe("verschilRijen", () => {
     expect(verschilRijen([6], [6, 4]).rijenErbij).toEqual([{ nummer: 2, vakken: 4 }]);
   });
 
-  // Vakken verdwijnen rechts. Wat links staat houdt zijn plek, en een
-  // partij die daar ligt dus ook.
   it("haalt vakken weg aan de rechterkant van een rij", () => {
     expect(verschilRijen([6, 6], [6, 4]).vakkenWeg).toEqual([{ nummer: 2, vanaf: 5 }]);
   });

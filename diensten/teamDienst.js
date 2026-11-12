@@ -1,10 +1,3 @@
-// Wie er bij de winkel hoort en wat ze mogen (SW-40).
-//
-// Er zijn twee rollen. De leidinggevende richt de plattegrond in, stelt
-// de afprijsregels in en ziet het overzicht van wat er is weggegooid. De
-// medewerker doet het werk op de vloer: producten in vakken zetten,
-// afmelden, scannen.
-
 import { Gebruiker } from "../modellen/index.js";
 import { HttpFout, nietGevonden } from "../kern/hulp.js";
 import { ROLLEN } from "../modellen/Gebruiker.js";
@@ -17,14 +10,6 @@ export async function lijst(winkelId) {
   return leden.map(naarBuiten);
 }
 
-/**
- * De rol van iemand in de winkel aanpassen.
- *
- * De laatste leidinggevende kan niet worden teruggezet naar medewerker,
- * ook niet door zichzelf. Dan zou er niemand meer zijn die de
- * plattegrond of de afprijsregels kan aanpassen, en is dat ook niet meer
- * te herstellen vanuit de app.
- */
 export async function wijzigRol(winkelId, id, invoer) {
   const rol = controle.keuze(invoer.rol, "Rol", ROLLEN);
   const lid = await Gebruiker.findOne({ where: { id, winkelId } });

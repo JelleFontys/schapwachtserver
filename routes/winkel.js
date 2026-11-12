@@ -1,10 +1,3 @@
-// De eigen winkel.
-//
-// Let op het ontbreken van een winkelId in de URL. Je kunt alleen je
-// eigen winkel opvragen, en welke dat is komt uit het token en niet
-// uit het verzoek. Daarmee is er geen URL te bedenken die de gegevens
-// van een andere winkel teruggeeft.
-
 import { Router } from "express";
 
 import { vangFouten, nietGevonden } from "../kern/hulp.js";
@@ -26,9 +19,6 @@ router.get(
     res.json({
       id: winkel.id,
       naam: winkel.naam,
-      // De code is het wachtwoord van de winkel: wie hem heeft, kan
-      // een account aanmaken dat alle gegevens ziet. Daarom alleen
-      // voor de leidinggevende.
       ...(req.gebruiker.rol === "LEIDINGGEVENDE"
         ? { uitnodigingscode: winkel.uitnodigingscode }
         : {}),

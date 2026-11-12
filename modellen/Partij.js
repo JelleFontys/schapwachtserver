@@ -1,16 +1,5 @@
 import { DataTypes, Model } from "sequelize";
 
-/**
- * Een partij: dit product, op deze plek, met deze houdbaarheidsdatum.
- *
- * - `vakId` mag leeg zijn. Als het raster kleiner wordt gemaakt, raken
- *   partijen hun plek kwijt maar worden ze niet verwijderd.
- * - `aantal` is indicatief en geen voorraadadministratie: de kassa weet
- *   niet welke partij verkocht is. De medewerker controleert, de app
- *   wijst aan.
- * - Een partij verdwijnt nooit vanzelf van de werklijst: alleen een
- *   mens kan hem afmelden.
- */
 export class Partij extends Model {}
 
 export const PARTIJ_STATUSSEN = ["ACTIEF", "AFGEMELD"];
@@ -55,8 +44,6 @@ export function maakPartij(sequelize) {
       modelName: "Partij",
       tableName: "partij",
       validate: {
-        // Afgemeld zonder uitkomst, of een uitkomst zonder afgemeld te
-        // zijn, betekent dat er iets misging in de afhandeling.
         uitkomstHoortBijAfgemeld() {
           if (this.status === "AFGEMELD" && !this.uitkomst) {
             throw new Error("Een afgemelde partij moet een uitkomst hebben.");

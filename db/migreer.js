@@ -1,12 +1,3 @@
-// Migraties uitvoeren.
-//
-//   npm run db:migreer   alles wat nog niet gelopen heeft uitvoeren
-//   npm run db:terug     de laatste migratie terugdraaien
-//   npm run db:reset     alles terugdraaien en opnieuw opbouwen
-//
-// Umzug houdt in de tabel `migraties` bij welke bestanden al gelopen
-// hebben. Daardoor kan dit commando veilig twee keer worden gestart.
-
 import { Umzug, SequelizeStorage } from "umzug";
 import { sequelize } from "../kern/db.js";
 import { OMGEVING } from "../kern/config.js";
@@ -49,8 +40,6 @@ async function main() {
   await sequelize.close();
 }
 
-// Alleen uitvoeren als dit bestand zelf gestart is, niet bij importeren
-// vanuit een test.
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
   main().catch((fout) => {
     console.error("Migreren mislukt:", fout.message);

@@ -1,6 +1,3 @@
-// Partijen: in een vak zetten, afmelden, opnieuw plaatsen. Dit is het
-// werk op de vloer, dus dit mag iedereen in de winkel.
-
 import { Router } from "express";
 
 import { vangFouten } from "../kern/hulp.js";

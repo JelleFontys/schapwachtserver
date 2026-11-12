@@ -1,11 +1,3 @@
-// Wat er is weggegooid, per productgroep, over een gekozen periode
-// (SW-39).
-//
-// Dit is de vraag die een leidinggevende na een paar weken stelt: waar
-// gooien we het meeste weg, en moet de afprijsregel daar dan eerder? Het
-// overzicht telt alleen afmeldingen met "weggegooid". Gestickerd of
-// uitverkocht is niet verloren.
-
 import { Op } from "sequelize";
 
 import { Partij, Product, Productgroep } from "../modellen/index.js";
@@ -16,7 +8,6 @@ import * as controle from "../kern/controle.js";
 const STANDAARD_PERIODE = 30;
 const MAX_PERIODE = 366;
 
-/** De periode uit de vraag, of de laatste 30 dagen. */
 export function periode(invoer = {}, opDatum = vandaag()) {
   const tot = invoer.tot ? controle.datum(invoer.tot, "Tot") : opDatum;
   const van = invoer.van
@@ -31,9 +22,6 @@ export function periode(invoer = {}, opDatum = vandaag()) {
 export async function weggegooid(winkelId, invoer) {
   const { van, tot } = periode(invoer);
 
-  // De tijdstippen staan in UTC. Een dag ruimer ophalen en daarna op de
-  // Nederlandse datum filteren, zodat een afmelding om kwart over twaalf
-  // 's nachts bij de goede dag hoort.
   const partijen = await Partij.findAll({
     where: {
       status: "AFGEMELD",
@@ -73,9 +61,6 @@ export async function weggegooid(winkelId, invoer) {
 
     const rij = groepen.get(sleutel);
     rij.partijen += 1;
-    // Het aantal is optioneel. Een partij zonder aantal telt wel als
-    // partij, maar niet als stuks; dat staat er apart bij, zodat het
-    // totaal niet stilletjes te laag uitvalt.
     if (partij.aantal === null) rij.zonderAantal += 1;
     else rij.stuks += partij.aantal;
     rij.producten.set(partij.Product.naam, (rij.producten.get(partij.Product.naam) ?? 0) + 1);

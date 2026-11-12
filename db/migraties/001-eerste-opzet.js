@@ -1,10 +1,3 @@
-// Eerste opzet van de database.
-//
-// De belangrijkste ontwerpkeuze zit in de tabel `partij`: een
-// houdbaarheidsdatum hoort bij een partij en niet bij een product.
-// Hetzelfde product kan op twee plekken liggen met verschillende
-// datums, en achter in een vak kan nog oude voorraad staan.
-
 import { DataTypes } from "sequelize";
 
 // Deze kolommen komen in bijna elke tabel terug.
@@ -121,8 +114,6 @@ export async function up({ context: queryInterface }) {
       references: { model: "product", key: "id" },
       onDelete: "CASCADE",
     },
-    // Mag leeg zijn: bij het verkleinen van het raster raakt een partij
-    // zijn plek kwijt, maar hij wordt niet verwijderd.
     vak_id: {
       type: DataTypes.UUID,
       allowNull: true,
@@ -151,9 +142,6 @@ export async function up({ context: queryInterface }) {
     ...tijdstempels,
   });
 
-  // Binnen één winkel mag een barcode maar één keer voorkomen. MySQL
-  // staat meerdere NULL-waarden toe in een unieke index, dus producten
-  // zonder barcode blijven mogelijk.
   await queryInterface.addConstraint("product", {
     fields: ["winkel_id", "barcode"],
     type: "unique",
@@ -178,14 +166,12 @@ export async function up({ context: queryInterface }) {
     name: "uq_vak_positie",
   });
 
-  // De werklijst vraagt actieve partijen op, gesorteerd op datum.
   await queryInterface.addIndex("partij", ["status", "houdbaar_tot"], {
     name: "ix_partij_werklijst",
   });
 }
 
 export async function down({ context: queryInterface }) {
-  // Omgekeerde volgorde: een tabel kan pas weg als niets ernaar verwijst.
   for (const tabel of [
     "partij",
     "vak",

@@ -1,11 +1,3 @@
-// Plattegronden van de eigen winkel, en de stellingen die erop komen.
-//
-// Bekijken mag iedereen in de winkel. De vloer en de stellingen
-// inrichten alleen de leidinggevende: een medewerker die per ongeluk
-// een stelling weghaalt, laat producten hun plek kwijtraken. Dat is een
-// keuze die past bij hoe een winkel werkt, maar SW-40 (rollen) kan hem
-// nog verschuiven.
-
 import { Router } from "express";
 
 import { vangFouten } from "../kern/hulp.js";

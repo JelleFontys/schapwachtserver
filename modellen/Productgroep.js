@@ -1,9 +1,5 @@
 import { DataTypes, Model } from "sequelize";
 
-/**
- * Productgroep met de afprijsregel van de winkel: hoeveel dagen voor de
- * houdbaarheidsdatum een product afgeprijsd moet worden.
- */
 export class Productgroep extends Model {}
 
 export function maakProductgroep(sequelize) {

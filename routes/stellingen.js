@@ -35,10 +35,6 @@ router.patch(
   }),
 );
 
-// DELETE /api/stellingen/:id?losmaken=ja
-//
-// Bevestigen gaat via de URL en niet via een body, omdat niet elke
-// proxy een body bij DELETE doorgeeft.
 router.delete(
   "/:id",
   alleenLeidinggevende,

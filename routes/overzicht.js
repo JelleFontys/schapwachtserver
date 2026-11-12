@@ -1,6 +1,3 @@
-// Overzicht van weggegooide producten (SW-39). Alleen voor de
-// leidinggevende: dit is sturingsinformatie, geen werk op de vloer.
-
 import { Router } from "express";
 
 import { vangFouten } from "../kern/hulp.js";

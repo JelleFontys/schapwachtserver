@@ -1,10 +1,5 @@
 import { DataTypes, Model } from "sequelize";
 
-/**
- * Eén kant van een stelling, met een eigen naam, bijvoorbeeld "Koek en
- * snoep" links en "Chips" rechts. Een stelling tegen de muur heeft
- * maar één kant.
- */
 export class Stellingkant extends Model {}
 
 export const KANTEN = ["LINKS", "RECHTS"];

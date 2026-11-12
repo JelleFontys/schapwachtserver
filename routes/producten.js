@@ -1,9 +1,3 @@
-// Het assortiment (SW-25) en opzoeken op barcode (SW-37).
-//
-// Een product aanmaken en aanpassen mag iedereen: wie een onbekend
-// product scant (SW-38) moet het meteen kunnen toevoegen. Weghalen mag
-// alleen de leidinggevende.
-
 import { Router } from "express";
 
 import { vangFouten } from "../kern/hulp.js";

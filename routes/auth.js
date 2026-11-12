@@ -1,5 +1,3 @@
-// Registreren, inloggen, uitloggen en opvragen wie je bent.
-
 import { Router } from "express";
 
 import { vangFouten, HttpFout } from "../kern/hulp.js";
@@ -23,8 +21,6 @@ router.post(
 router.post(
   "/inloggen",
   vangFouten(async (req, res) => {
-    // Eerst het e-mailadres controleren, want de teller heeft het
-    // nodig als sleutel.
     const email = controle.email((req.body ?? {}).email);
     const ip = req.ip ?? "onbekend";
 
@@ -48,22 +44,10 @@ router.post(
   }),
 );
 
-// POST /api/auth/uitloggen
-//
-// Hier gebeurt bewust niets aan de serverkant. Een JWT is niet
-// in te trekken: hij is geldig tot hij verloopt. Uitloggen betekent
-// dus dat de browser zijn token weggooit. Deze route bestaat zodat de
-// front-end één plek heeft om dat aan te roepen, en zodat het
-// duidelijk is dat dit geen vergissing is maar een gevolg van de
-// keuze voor tokens in plaats van sessies.
 router.post("/uitloggen", (req, res) => {
   res.json({ bericht: "Uitgelogd. Gooi het token weg aan de clientkant." });
 });
 
-// GET /api/auth/ik
-//
-// De front-end gebruikt dit na het herladen van de pagina om te weten
-// of het bewaarde token nog geldig is en wie erbij hoort.
 router.get("/ik", ingelogd, (req, res) => {
   res.json({ gebruiker: naarBuiten(req.gebruiker) });
 });

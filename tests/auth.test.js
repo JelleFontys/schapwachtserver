@@ -1,11 +1,3 @@
-// Tests voor de auth-routes.
-//
-// Deze tests raken de database niet: ze controleren de weigeringen, en
-// die komen allemaal vóór de eerste query. Dat is bewust, want zo
-// draaien ze ook in de pipeline, waar geen MySQL staat. Het slagen van
-// registreren en inloggen is daarmee nog niet getest; dat heeft een
-// echte database nodig.
-
 import { describe, it, expect, vi } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
@@ -35,8 +27,6 @@ describe("POST /api/auth/registreer", () => {
     expect(r.body.fout).toMatch(/8 tekens/);
   });
 
-  // Een gebruiker hoort altijd bij een winkel: óf je begint een nieuwe,
-  // óf je sluit je aan met een code. Beide of geen van beide kan niet.
   it("weigert registreren zonder winkelnaam en zonder code", async () => {
     const r = await request(app).post("/api/auth/registreer").send({
       naam: "Tim de Groot",
@@ -135,13 +125,7 @@ describe("beveiligde routes", () => {
     expect(r.status).toBe(401);
   });
 
-  // Een geldig ondertekend token van een account dat niet bestaat moet
-  // ook 401 geven. Dit is de enige test hier die de database aanraakt;
-  // is die onbereikbaar, dan komt er 500 uit en dat is geen fout in de
-  // code. Daarom staat die uitkomst hier toegestaan.
   it("vertrouwt niet alleen op de ondertekening van het token", async () => {
-    // De foutafhandeling schrijft een onbereikbare database naar de
-    // console. Dat is terecht, maar in de testuitvoer is het ruis.
     const stil = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const geldigOndertekend = jwt.sign(

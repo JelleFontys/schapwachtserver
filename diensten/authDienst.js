@@ -1,9 +1,3 @@
-// Alles rond registreren en inloggen.
-//
-// De routes nemen hier geen beslissingen: die lezen het verzoek en
-// geven het antwoord. Wat er mag en wat er gebeurt staat hier, zodat
-// het te testen is zonder dat er een Express-verzoek aan te pas komt.
-
 import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { UniqueConstraintError } from "sequelize";
@@ -13,12 +7,8 @@ import { HttpFout, ongeldig, nietIngelogd } from "../kern/hulp.js";
 import { maakToken } from "../kern/token.js";
 import * as controle from "../kern/controle.js";
 
-// 10 ronden: bcrypt wordt daarmee traag genoeg dat gokken niet loont,
-// maar snel genoeg dat inloggen niet merkbaar blijft hangen.
 const BCRYPT_RONDEN = 10;
 
-// Zonder 0, O, 1, I en L: die zijn niet van elkaar te onderscheiden
-// als iemand de code overtypt van een briefje.
 const CODE_TEKENS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
 function nieuweCode() {
@@ -30,7 +20,6 @@ function nieuweCode() {
   return code;
 }
 
-/** Wat de API over een gebruiker teruggeeft. Nooit de hash. */
 const naarBuiten = (gebruiker) => ({
   id: gebruiker.id,
   naam: gebruiker.naam,
@@ -39,15 +28,6 @@ const naarBuiten = (gebruiker) => ({
   winkelId: gebruiker.winkelId,
 });
 
-/**
- * Nieuw account.
- *
- * Een gebruiker hoort altijd bij een winkel, dus bij registreren moet
- * je er één kiezen: een nieuwe beginnen (dan ben je leidinggevende) of
- * je bij een bestaande aansluiten met een uitnodigingscode (dan ben je
- * medewerker). Zonder die keuze zou er een account zonder winkel
- * bestaan, en daar kan de app niets mee.
- */
 export async function registreer(invoer) {
   const naam = controle.tekst(invoer.naam, "Naam", { max: 120 });
   const email = controle.email(invoer.email);
@@ -91,21 +71,12 @@ export async function registreer(invoer) {
     return { gebruiker: naarBuiten(gebruiker), token: maakToken(gebruiker) };
   } catch (fout) {
     if (fout instanceof UniqueConstraintError) {
-      // Niet verklappen of dit e-mailadres al bestaat zou netter zijn,
-      // maar dan kan iemand geen account aanmaken zonder te weten
-      // waarom het niet lukt. Bij registreren weegt duidelijkheid hier
-      // zwaarder; bij inloggen is dat omgekeerd.
       throw new HttpFout(409, "Er bestaat al een account met dit e-mailadres.");
     }
     throw fout;
   }
 }
 
-/**
- * Winkel aanmaken met een unieke code. De kans dat twee winkels
- * dezelfde code krijgen is klein, maar niet nul, dus bij een botsing
- * proberen we het opnieuw in plaats van de registratie te laten falen.
- */
 async function maakWinkelMetCode(naam, transaction, pogingen = 5) {
   for (let poging = 1; poging <= pogingen; poging++) {
     try {
@@ -120,22 +91,12 @@ async function maakWinkelMetCode(naam, transaction, pogingen = 5) {
   }
 }
 
-/**
- * Inloggen.
- *
- * Bij een onbekend e-mailadres en bij een fout wachtwoord komt exact
- * dezelfde melding terug. Zou de melding verschillen, dan kan iemand
- * er achter komen welke e-mailadressen een account hebben.
- */
 export async function logIn(invoer) {
   const email = controle.email(invoer.email);
   const wachtwoord = typeof invoer.wachtwoord === "string" ? invoer.wachtwoord : "";
 
   const gebruiker = await Gebruiker.scope("metWachtwoord").findOne({ where: { email } });
 
-  // Ook bij een onbekend e-mailadres een hash controleren. Anders is
-  // een mislukte poging meetbaar sneller dan een geslaagde, en daarmee
-  // is te zien of een adres bestaat.
   const hash = gebruiker?.wachtwoordHash ?? "$2b$10$ongeldigehashalsvervangingvoornietsxxxxxxxxxxxxxxxxxxxxxx";
   const klopt = await bcrypt.compare(wachtwoord, hash);
 

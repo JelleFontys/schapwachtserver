@@ -38,8 +38,6 @@ describe("controle.wachtwoord", () => {
     expect(() => controle.wachtwoord("alleenletters")).toThrow(/cijfer/);
   });
 
-  // bcrypt kijkt alleen naar de eerste 72 bytes. Zonder deze grens zou
-  // alles daarna stil wegvallen.
   it("weigert meer dan 72 bytes", () => {
     expect(() => controle.wachtwoord("a1" + "x".repeat(71))).toThrow(/72 tekens/);
   });

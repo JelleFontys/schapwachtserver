@@ -1,12 +1,5 @@
-// Controle op wat er binnenkomt.
-//
-// Alles wat van buiten komt is onbetrouwbaar tot het gecontroleerd is.
-// Deze functies gooien een 400-fout met een melding die de gebruiker
-// mag zien.
-
 import { ongeldig } from "./hulp.js";
 
-/** Tekst die er moet staan, zonder spaties eromheen. */
 export function tekst(waarde, naam, { max = 190, min = 1 } = {}) {
   if (typeof waarde !== "string") throw ongeldig(`${naam} ontbreekt.`);
 
@@ -17,13 +10,9 @@ export function tekst(waarde, naam, { max = 190, min = 1 } = {}) {
   return schoon;
 }
 
-/** E-mailadres, altijd in kleine letters opgeslagen. */
 export function email(waarde) {
   const schoon = tekst(waarde, "E-mailadres", { max: 190 }).toLowerCase();
 
-  // Geen uitputtende controle: dat kan alleen door een mail te sturen.
-  // Deze controle houdt typefouten tegen, niet een vastbesloten
-  // gebruiker met een raar adres.
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(schoon)) {
     throw ongeldig("Dit is geen geldig e-mailadres.");
   }
@@ -31,15 +20,6 @@ export function email(waarde) {
   return schoon;
 }
 
-/**
- * Wachtwoord. Niet trimmen: spaties mogen erin zitten en zijn dan deel
- * van het wachtwoord.
- *
- * De bovengrens van 72 is geen willekeurige keuze: bcrypt kijkt alleen
- * naar de eerste 72 bytes. Zonder deze controle zou alles daarna stil
- * genegeerd worden, en dan denkt iemand een lang wachtwoord te hebben
- * terwijl alleen het begin meetelt.
- */
 export function wachtwoord(waarde) {
   if (typeof waarde !== "string") throw ongeldig("Wachtwoord ontbreekt.");
   if (waarde.length < 8) throw ongeldig("Een wachtwoord moet minstens 8 tekens hebben.");
@@ -53,10 +33,6 @@ export function wachtwoord(waarde) {
   return waarde;
 }
 
-/**
- * Geheel getal binnen grenzen. Een getal als tekst ("4") mag ook,
- * omdat een formulierveld dat soms zo verstuurt.
- */
 export function geheelGetal(waarde, naam, { min, max }) {
   const getal = typeof waarde === "string" && waarde.trim() !== "" ? Number(waarde) : waarde;
 
@@ -70,7 +46,6 @@ export function geheelGetal(waarde, naam, { min, max }) {
   return getal;
 }
 
-/** Tekst die leeg mag zijn. Leeg of alleen spaties wordt null. */
 export function optioneleTekst(waarde, naam, { max = 190 } = {}) {
   if (waarde === undefined || waarde === null) return null;
   if (typeof waarde !== "string") throw ongeldig(`${naam} moet tekst zijn.`);
@@ -82,11 +57,6 @@ export function optioneleTekst(waarde, naam, { max = 190 } = {}) {
   return schoon;
 }
 
-/**
- * Een datum als "jjjj-mm-dd" die ook echt bestaat. "2026-02-30" past in
- * het patroon maar is geen datum; daarom wordt hij heen en terug
- * omgerekend en vergeleken.
- */
 export function datum(waarde, naam) {
   if (typeof waarde !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(waarde)) {
     throw ongeldig(`${naam} moet een datum zijn (jjjj-mm-dd).`);
@@ -97,7 +67,6 @@ export function datum(waarde, naam) {
   return waarde;
 }
 
-/** Eén van een vaste lijst waarden. */
 export function keuze(waarde, naam, opties) {
   if (!opties.includes(waarde)) {
     throw ongeldig(`${naam} moet een van deze zijn: ${opties.join(", ")}.`);
@@ -105,11 +74,6 @@ export function keuze(waarde, naam, opties) {
   return waarde;
 }
 
-/**
- * Barcode: alleen cijfers, 8 tot 14 lang (EAN-8 tot en met GTIN-14).
- * Spaties die iemand bij het overtypen zet worden weggehaald. Leeg mag:
- * niet elk product heeft een barcode.
- */
 export function barcode(waarde) {
   if (waarde === undefined || waarde === null) return null;
   if (typeof waarde !== "string") throw ongeldig("Barcode moet tekst zijn.");
@@ -120,7 +84,6 @@ export function barcode(waarde) {
   return schoon;
 }
 
-/** Uitnodigingscode: hoofdletters en cijfers, streepje mag. */
 export function uitnodigingscode(waarde) {
   const schoon = tekst(waarde, "Uitnodigingscode", { max: 40 }).toUpperCase();
 

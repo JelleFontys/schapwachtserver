@@ -27,8 +27,6 @@ describe("inlogpogingen tellen", () => {
     expect(wachttijd(EMAIL, IP)).toBe(0);
   });
 
-  // Anders kan iemand één account onbruikbaar maken door vijf keer een
-  // fout wachtwoord in te typen.
   it("sluit een ander IP-adres niet buiten", () => {
     for (let i = 0; i < 5; i++) pogingMislukt(EMAIL, IP);
 

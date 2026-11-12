@@ -1,6 +1,5 @@
 import { DataTypes, Model } from "sequelize";
 
-/** Eén rij (plank) aan een kant van een stelling. Rij 1 is de bovenste. */
 export class Plank extends Model {}
 
 export function maakPlank(sequelize) {
