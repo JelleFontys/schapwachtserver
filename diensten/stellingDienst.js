@@ -24,6 +24,8 @@ import * as controle from "../kern/controle.js";
 import { MAX_KOLOMMEN, MAX_RIJEN, binnenRaster, overlappen } from "../kern/raster.js";
 import { controleerKanten, verschilRijen, plekNaam } from "../kern/stelling.js";
 import { zoek, stellingNaarBuiten, stellingMetInhoud } from "./plattegrondDienst.js";
+import { inVakken, naarBuiten as partijNaarBuiten } from "./partijDienst.js";
+import { ernstigste } from "../kern/status.js";
 
 const KANTEN = ["LINKS", "RECHTS"];
 
@@ -32,7 +34,7 @@ async function zoekStelling(winkelId, id, transaction) {
   const stelling = await Stelling.findOne({
     where: { id },
     include: [
-      { model: Plattegrond, where: { winkelId }, attributes: ["id"] },
+      { model: Plattegrond, where: { winkelId }, attributes: ["id", "naam"] },
       ...stellingMetInhoud,
     ],
     transaction,
@@ -44,6 +46,60 @@ async function zoekStelling(winkelId, id, transaction) {
 export async function haal(winkelId, id) {
   const stelling = await zoekStelling(winkelId, id);
   return { ...stellingNaarBuiten(stelling), plattegrondId: stelling.plattegrondId };
+}
+
+/**
+ * Een stelling opengeklapt (SW-27): per kant alle rijen van boven naar
+ * beneden, en in elk vak de partijen die er liggen, vroegste datum
+ * eerst. Elk vak, elke kant en de stelling krijgen de ernstigste status
+ * van wat erin ligt (SW-31, SW-32).
+ */
+export async function inhoud(winkelId, id) {
+  const stelling = await zoekStelling(winkelId, id);
+  const vakIds = stelling.kanten.flatMap((k) => k.planken.flatMap((p) => p.vakken.map((v) => v.id)));
+
+  const perVak = new Map();
+  for (const partij of await inVakken(winkelId, vakIds)) {
+    if (!perVak.has(partij.vakId)) perVak.set(partij.vakId, []);
+    perVak.get(partij.vakId).push(partijNaarBuiten(partij));
+  }
+
+  const kanten = KANTEN.map((welke) => stelling.kanten.find((k) => k.kant === welke))
+    .filter(Boolean)
+    .map((kant) => {
+      const rijen = [...kant.planken]
+        .sort((a, b) => a.nummer - b.nummer)
+        .map((plank) => ({
+          nummer: plank.nummer,
+          vakken: [...plank.vakken]
+            .sort((a, b) => a.positie - b.positie)
+            .map((vak) => {
+              const partijen = perVak.get(vak.id) ?? [];
+              return {
+                id: vak.id,
+                positie: vak.positie,
+                status: ernstigste(partijen.map((p) => p.status)),
+                partijen,
+              };
+            }),
+        }));
+      return {
+        id: kant.id,
+        kant: kant.kant,
+        naam: kant.naam,
+        status: ernstigste(rijen.flatMap((r) => r.vakken.map((v) => v.status))),
+        rijen,
+      };
+    });
+
+  const statusPerKant = new Map(kanten.map((k) => [k.id, k.status]));
+
+  return {
+    ...stellingNaarBuiten(stelling, statusPerKant),
+    plattegrondId: stelling.plattegrondId,
+    plattegrond: stelling.Plattegrond.naam,
+    kanten,
+  };
 }
 
 /** Een kant met zijn rijen en vakken aanmaken. */

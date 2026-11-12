@@ -21,10 +21,17 @@
 //    routes/auth.js     registreren, inloggen, uitloggen
 //    routes/winkel.js   de eigen winkel en haar medewerkers
 //    routes/plattegronden.js  de vloer, de randen en nieuwe stellingen
-//    routes/stellingen.js     een stelling bekijken, aanpassen, weghalen
+//    routes/stellingen.js     een stelling bekijken, openklappen, aanpassen, weghalen
+//    routes/producten.js      het assortiment, en opzoeken op barcode
+//    routes/productgroepen.js productgroepen en hun afprijsregel
+//    routes/partijen.js       een product met datum in een vak, afmelden, plaatsen
+//    routes/vakken.js         een heel vak leegmelden
+//    routes/werklijst.js      alles wat actief is, kortst houdbaar bovenaan
+//    routes/overzicht.js      wat er is weggegooid, per productgroep
 //
 //    kern/raster.js   rekenwerk aan de vloer, zonder database
 //    kern/stelling.js rekenwerk aan kanten, rijen en vakken, zonder database
+//    kern/status.js   groen, oranje of rood, zonder database
 //
 //  Express kijkt routes van boven naar beneden af, dus de volgorde
 //  in kern/app.js moet kloppen.

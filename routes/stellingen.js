@@ -18,6 +18,14 @@ router.get(
   }),
 );
 
+// GET /api/stellingen/:id/inhoud   opengeklapt, met alle partijen per vak (SW-27)
+router.get(
+  "/:id/inhoud",
+  vangFouten(async (req, res) => {
+    res.json(await stellingen.inhoud(req.gebruiker.winkelId, req.params.id));
+  }),
+);
+
 // PATCH /api/stellingen/:id   { links, rechts, losmaken? }
 router.patch(
   "/:id",

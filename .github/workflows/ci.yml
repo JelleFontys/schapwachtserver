@@ -1,8 +1,9 @@
-name: CI
+name: CI en uitrollen
 
-# De API wordt niet gebouwd: Dokploy doet dat zelf met Nixpacks. Deze
-# pipeline controleert alleen of de code klopt, zodat een fout opvalt
-# voordat hij op de server staat.
+# Bij elke push en pull request: linten en testen.
+# Alleen bij een push naar main, en alleen als dat lukte: de API laten
+# uitrollen in Dokploy (SW-41). Zo komt er nooit code online waarvan de
+# tests falen.
 
 on:
   push:
@@ -11,18 +12,16 @@ on:
     branches: [main]
 
 permissions:
-  contents: read # lezen is genoeg, deze pipeline publiceert niets
+  contents: read # lezen is genoeg, deze pipeline publiceert niets in GitHub
 
 jobs:
   controle:
     runs-on: ubuntu-latest
-
     env:
       # De tests praten niet met een echte database. Met NODE_ENV=test
       # valt de config terug op testwaarden, zodat er geen geheimen in
-      # de pipeline nodig zijn.
+      # deze stap nodig zijn.
       NODE_ENV: test
-
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -35,3 +34,29 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run lint
       - run: npm test
+
+  uitrollen:
+    needs: controle
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Een tweede push terwijl de eerste nog uitrolt: wacht netjes op je
+    # beurt, in plaats van twee uitrollen door elkaar.
+    concurrency: uitrollen-api
+    steps:
+      - name: Dokploy laten uitrollen
+        env:
+          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+          DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
+          DOKPLOY_APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
+        run: |
+          if [ -z "$DOKPLOY_URL" ] || [ -z "$DOKPLOY_API_TOKEN" ] || [ -z "$DOKPLOY_APPLICATION_ID" ]; then
+            echo "::warning::Uitrollen overgeslagen: DOKPLOY_URL, DOKPLOY_API_TOKEN en DOKPLOY_APPLICATION_ID staan nog niet bij de secrets van deze repo."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error \
+            -X POST "${DOKPLOY_URL%/}/api/application.deploy" \
+            -H "accept: application/json" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $DOKPLOY_API_TOKEN" \
+            -d "{\"applicationId\": \"$DOKPLOY_APPLICATION_ID\"}"
+          echo "Uitrol gestart."

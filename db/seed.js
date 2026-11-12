@@ -166,7 +166,7 @@ async function main() {
       ["Tarwebrood heel", "8710400200017", "Brood"],
       ["Gerookte kipfilet 150g", "8710400311126", "Koelvers"],
       ["Chocoladekoekjes 300g", "8710400455202", "Houdbaar"],
-      ["Sinaasappelsap 1L", "8710400499113", "Houdbaar"],
+      ["Sinaasappelsap 1L", "8710400499114", "Houdbaar"],
     ]) {
       const product = await Product.create(
         { winkelId: winkel.id, productgroepId: groepen.get(groep), naam, barcode },
@@ -180,7 +180,9 @@ async function main() {
     // is precies het geval waar dit systeem om gebouwd is.
     const plek = (kant, rij, vak) => vakken[kant][rij - 1][vak - 1];
     const partijen = [
-      ["Halfvolle melk 1L", plek("Zuivel en vleeswaren", 1, 1), 0, 8],
+      // Eén dag over de datum: rood. Op de datum zelf zou hij oranje
+      // zijn, want tot en met die dag mag hij nog verkocht worden.
+      ["Halfvolle melk 1L", plek("Zuivel en vleeswaren", 1, 1), -1, 8],
       ["Halfvolle melk 1L", plek("Zuivel en vleeswaren", 1, 1), 6, 12],
       ["Volle yoghurt 500g", plek("Zuivel en vleeswaren", 2, 1), 9, 10],
       ["Gerookte kipfilet 150g", plek("Zuivel en vleeswaren", 3, 2), 2, 6],

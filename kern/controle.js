@@ -82,6 +82,44 @@ export function optioneleTekst(waarde, naam, { max = 190 } = {}) {
   return schoon;
 }
 
+/**
+ * Een datum als "jjjj-mm-dd" die ook echt bestaat. "2026-02-30" past in
+ * het patroon maar is geen datum; daarom wordt hij heen en terug
+ * omgerekend en vergeleken.
+ */
+export function datum(waarde, naam) {
+  if (typeof waarde !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(waarde)) {
+    throw ongeldig(`${naam} moet een datum zijn (jjjj-mm-dd).`);
+  }
+  const [j, m, d] = waarde.split("-").map(Number);
+  const echt = new Date(Date.UTC(j, m - 1, d)).toISOString().slice(0, 10);
+  if (echt !== waarde) throw ongeldig(`${naam} bestaat niet.`);
+  return waarde;
+}
+
+/** Eén van een vaste lijst waarden. */
+export function keuze(waarde, naam, opties) {
+  if (!opties.includes(waarde)) {
+    throw ongeldig(`${naam} moet een van deze zijn: ${opties.join(", ")}.`);
+  }
+  return waarde;
+}
+
+/**
+ * Barcode: alleen cijfers, 8 tot 14 lang (EAN-8 tot en met GTIN-14).
+ * Spaties die iemand bij het overtypen zet worden weggehaald. Leeg mag:
+ * niet elk product heeft een barcode.
+ */
+export function barcode(waarde) {
+  if (waarde === undefined || waarde === null) return null;
+  if (typeof waarde !== "string") throw ongeldig("Barcode moet tekst zijn.");
+
+  const schoon = waarde.replace(/\s+/g, "");
+  if (schoon === "") return null;
+  if (!/^\d{8,14}$/.test(schoon)) throw ongeldig("Een barcode bestaat uit 8 tot 14 cijfers.");
+  return schoon;
+}
+
 /** Uitnodigingscode: hoofdletters en cijfers, streepje mag. */
 export function uitnodigingscode(waarde) {
   const schoon = tekst(waarde, "Uitnodigingscode", { max: 40 }).toUpperCase();

@@ -9,7 +9,8 @@ import { Router } from "express";
 
 import { vangFouten, nietGevonden } from "../kern/hulp.js";
 import { ingelogd, alleenLeidinggevende } from "../middleware/ingelogd.js";
-import { Winkel, Gebruiker } from "../modellen/index.js";
+import { Winkel } from "../modellen/index.js";
+import * as team from "../diensten/teamDienst.js";
 
 const router = Router();
 
@@ -40,14 +41,16 @@ router.get(
   "/medewerkers",
   alleenLeidinggevende,
   vangFouten(async (req, res) => {
-    const medewerkers = await Gebruiker.findAll({
-      where: { winkelId: req.gebruiker.winkelId },
-      order: [["naam", "ASC"]],
-    });
+    res.json(await team.lijst(req.gebruiker.winkelId));
+  }),
+);
 
-    res.json(
-      medewerkers.map((m) => ({ id: m.id, naam: m.naam, email: m.email, rol: m.rol })),
-    );
+// PATCH /api/winkel/medewerkers/:id   { rol }   (SW-40)
+router.patch(
+  "/medewerkers/:id",
+  alleenLeidinggevende,
+  vangFouten(async (req, res) => {
+    res.json(await team.wijzigRol(req.gebruiker.winkelId, req.params.id, req.body ?? {}));
   }),
 );
 

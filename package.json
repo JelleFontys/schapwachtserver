@@ -8,7 +8,7 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "node db/migreer.js && node server.js",
     "dev": "node --watch server.js",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -7,7 +7,17 @@
 
 import { UniqueConstraintError } from "sequelize";
 
-import { sequelize, Plattegrond, Stelling, Stellingkant, Plank, Vak } from "../modellen/index.js";
+import {
+  sequelize,
+  Plattegrond,
+  Stelling,
+  Stellingkant,
+  Plank,
+  Vak,
+  Partij,
+  Product,
+  Productgroep,
+} from "../modellen/index.js";
 import { HttpFout, nietGevonden, ongeldig } from "../kern/hulp.js";
 import * as controle from "../kern/controle.js";
 import {
@@ -19,6 +29,7 @@ import {
   raaktRand,
   randWijziging,
 } from "../kern/raster.js";
+import { afprijsDagenVan, ernstigste, statusVan } from "../kern/status.js";
 
 const naarBuiten = (plattegrond) => ({
   id: plattegrond.id,
@@ -27,18 +38,23 @@ const naarBuiten = (plattegrond) => ({
   kolommen: plattegrond.kolommen,
 });
 
-const kantNaarBuiten = (kant) =>
+/**
+ * Een kant zoals de API hem teruggeeft. `status` is de ernstigste status
+ * van wat er op die kant ligt (SW-32), of null als hij leeg is.
+ */
+const kantNaarBuiten = (kant, statusPerKant) =>
   kant
     ? {
         naam: kant.naam,
         rijen: [...kant.planken]
           .sort((a, b) => a.nummer - b.nummer)
           .map((plank) => plank.vakken.length),
+        status: statusPerKant.get(kant.id) ?? null,
       }
     : null;
 
 /** Een stelling zoals de API hem teruggeeft. */
-export function stellingNaarBuiten(stelling) {
+export function stellingNaarBuiten(stelling, statusPerKant = new Map()) {
   const kant = (welke) => stelling.kanten.find((k) => k.kant === welke);
   return {
     id: stelling.id,
@@ -46,9 +62,59 @@ export function stellingNaarBuiten(stelling) {
     y: stelling.y,
     breedte: stelling.breedte,
     hoogte: stelling.hoogte,
-    links: kantNaarBuiten(kant("LINKS")),
-    rechts: kantNaarBuiten(kant("RECHTS")),
+    links: kantNaarBuiten(kant("LINKS"), statusPerKant),
+    rechts: kantNaarBuiten(kant("RECHTS"), statusPerKant),
   };
+}
+
+/**
+ * De status van elke stellingkant op een plattegrond, in één query: alle
+ * actieve partijen op deze vloer, met de kant waar ze liggen en de
+ * afprijsregel van hun product.
+ */
+async function statussenPerKant(plattegrondId) {
+  const partijen = await Partij.findAll({
+    where: { status: "ACTIEF" },
+    attributes: ["id", "houdbaarTot"],
+    include: [
+      {
+        model: Vak,
+        required: true,
+        attributes: ["id"],
+        include: [
+          {
+            model: Plank,
+            required: true,
+            attributes: ["stellingkantId"],
+            include: [
+              {
+                model: Stellingkant,
+                required: true,
+                attributes: ["id"],
+                include: [
+                  { model: Stelling, required: true, attributes: ["id"], where: { plattegrondId } },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: Product,
+        required: true,
+        attributes: ["id"],
+        include: [{ model: Productgroep, attributes: ["afprijsDagen"] }],
+      },
+    ],
+  });
+
+  const perKant = new Map();
+  for (const partij of partijen) {
+    const kantId = partij.Vak.Plank.stellingkantId;
+    const status = statusVan(partij.houdbaarTot, afprijsDagenVan(partij.Product));
+    perKant.set(kantId, ernstigste([perKant.get(kantId), status]));
+  }
+  return perKant;
 }
 
 /** Alles wat nodig is om een stelling met zijn kanten en vakken te laden. */
@@ -117,7 +183,12 @@ export async function haal(winkelId, id) {
     ],
   });
 
-  return { ...naarBuiten(plattegrond), stellingen: stellingen.map(stellingNaarBuiten) };
+  const statusPerKant = await statussenPerKant(plattegrond.id);
+
+  return {
+    ...naarBuiten(plattegrond),
+    stellingen: stellingen.map((stelling) => stellingNaarBuiten(stelling, statusPerKant)),
+  };
 }
 
 /**

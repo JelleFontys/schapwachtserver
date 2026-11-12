@@ -13,6 +13,12 @@ import authRoutes from "../routes/auth.js";
 import winkelRoutes from "../routes/winkel.js";
 import plattegrondRoutes from "../routes/plattegronden.js";
 import stellingRoutes from "../routes/stellingen.js";
+import productRoutes from "../routes/producten.js";
+import productgroepRoutes from "../routes/productgroepen.js";
+import partijRoutes from "../routes/partijen.js";
+import vakRoutes from "../routes/vakken.js";
+import werklijstRoutes from "../routes/werklijst.js";
+import overzichtRoutes from "../routes/overzicht.js";
 
 export function maakApp() {
   const app = express();
@@ -42,6 +48,12 @@ export function maakApp() {
   app.use("/api/winkel", winkelRoutes);
   app.use("/api/plattegronden", plattegrondRoutes);
   app.use("/api/stellingen", stellingRoutes);
+  app.use("/api/producten", productRoutes);
+  app.use("/api/productgroepen", productgroepRoutes);
+  app.use("/api/partijen", partijRoutes);
+  app.use("/api/vakken", vakRoutes);
+  app.use("/api/werklijst", werklijstRoutes);
+  app.use("/api/overzicht", overzichtRoutes);
 
   // Route bestaat niet.
   app.use((req, res) => {

@@ -103,6 +103,17 @@ describe("beveiligde routes", () => {
     ["get", "/api/stellingen/11111111-1111-4111-8111-111111111111"],
     ["patch", "/api/stellingen/11111111-1111-4111-8111-111111111111"],
     ["delete", "/api/stellingen/11111111-1111-4111-8111-111111111111"],
+    ["get", "/api/stellingen/11111111-1111-4111-8111-111111111111/inhoud"],
+    ["get", "/api/producten"],
+    ["get", "/api/producten/barcode/8710400145301"],
+    ["post", "/api/producten"],
+    ["get", "/api/productgroepen"],
+    ["post", "/api/partijen"],
+    ["post", "/api/partijen/11111111-1111-4111-8111-111111111111/afmelden"],
+    ["post", "/api/vakken/11111111-1111-4111-8111-111111111111/leegmelden"],
+    ["get", "/api/werklijst"],
+    ["get", "/api/overzicht/weggegooid"],
+    ["patch", "/api/winkel/medewerkers/11111111-1111-4111-8111-111111111111"],
   ])("geeft 401 op %s %s zonder token", async (methode, pad) => {
     const r = await request(app)[methode](pad).send({ naam: "Winkel" });
 

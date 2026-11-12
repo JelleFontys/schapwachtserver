@@ -88,3 +88,39 @@ describe("controle.optioneleTekst", () => {
     expect(() => controle.optioneleTekst("x".repeat(121), "Naam", { max: 120 })).toThrow();
   });
 });
+
+describe("controle.datum", () => {
+  it("neemt een echte datum aan", () => {
+    expect(controle.datum("2026-11-11", "Datum")).toBe("2026-11-11");
+  });
+
+  // Past in het patroon, maar bestaat niet.
+  it.each(["2026-02-30", "2026-13-01", "2027-02-29"])("weigert %s", (waarde) => {
+    expect(() => controle.datum(waarde, "Datum")).toThrow(/bestaat niet/);
+  });
+
+  it.each(["11-11-2026", "2026/11/11", "", null])("weigert %j als vorm", (waarde) => {
+    expect(() => controle.datum(waarde, "Datum")).toThrow(/jjjj-mm-dd/);
+  });
+});
+
+describe("controle.barcode", () => {
+  it("haalt spaties weg die iemand bij het overtypen zet", () => {
+    expect(controle.barcode("8710 4001 4530 1")).toBe("8710400145301");
+  });
+
+  it("maakt van leeg geen barcode", () => {
+    expect(controle.barcode("")).toBeNull();
+    expect(controle.barcode(undefined)).toBeNull();
+  });
+
+  it.each(["1234567", "123456789012345", "87104OO145301"])("weigert %s", (waarde) => {
+    expect(() => controle.barcode(waarde)).toThrow(/8 tot 14 cijfers/);
+  });
+});
+
+describe("controle.keuze", () => {
+  it("weigert iets buiten de lijst", () => {
+    expect(() => controle.keuze("KWIJT", "Uitkomst", ["GESTICKERD", "WEGGEGOOID"])).toThrow();
+  });
+});
