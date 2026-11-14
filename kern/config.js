@@ -28,3 +28,7 @@ export const HERKOMSTEN = (
 export const JWT_SECRET = IS_TEST
   ? (process.env.JWT_SECRET ?? "sleutel-alleen-voor-tests")
   : verplicht("JWT_SECRET");
+
+// Open Food Facts wil weten wie er vraagt: "AppNaam/Versie (contact)".
+export const OFF_USER_AGENT = process.env.OFF_USER_AGENT || "SchapWacht/1.0 (https://schapwacht.nl)";
+export const OFF_URL = (process.env.OFF_URL || "https://world.openfoodfacts.org").replace(/\/+$/, "");

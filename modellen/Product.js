@@ -2,6 +2,8 @@ import { DataTypes, Model } from "sequelize";
 
 export class Product extends Model {}
 
+export const PRODUCT_BRONNEN = ["EIGEN", "OPEN_FOOD_FACTS"];
+
 export function maakProduct(sequelize) {
   Product.init(
     {
@@ -24,6 +26,11 @@ export function maakProduct(sequelize) {
             msg: "Een barcode bestaat uit 8 tot 14 cijfers.",
           },
         },
+      },
+      bron: {
+        type: DataTypes.ENUM(...PRODUCT_BRONNEN),
+        allowNull: false,
+        defaultValue: "EIGEN",
       },
     },
     { sequelize, modelName: "Product", tableName: "product" },

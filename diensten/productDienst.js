@@ -4,12 +4,14 @@ import { Product, Productgroep, Partij } from "../modellen/index.js";
 import { HttpFout, nietGevonden, ongeldig } from "../kern/hulp.js";
 import { afprijsDagenVan, statusVan } from "../kern/status.js";
 import * as controle from "../kern/controle.js";
+import { NietBereikbaar, opzoeken } from "../kern/openFoodFacts.js";
 import { plekInclude, plekVan } from "./plek.js";
 
 export const naarBuiten = (product) => ({
   id: product.id,
   naam: product.naam,
   barcode: product.barcode,
+  bron: product.bron,
   productgroep: product.Productgroep
     ? { id: product.Productgroep.id, naam: product.Productgroep.naam }
     : null,
@@ -40,6 +42,25 @@ async function barcodeBestaatAl(winkelId, barcode) {
   });
 }
 
+// Staat deze barcode in de openbare database? Bij een storing daar
+// gaat het gewoon door: dan kunnen we het niet controleren.
+async function inOpenbareDatabase(barcode) {
+  try {
+    return await opzoeken(barcode);
+  } catch (fout) {
+    if (fout instanceof NietBereikbaar) return null;
+    throw fout;
+  }
+}
+
+function hoortBijOpenbaar(barcode, gevonden) {
+  return new HttpFout(
+    409,
+    `Er is al een product met deze barcode in de openbare database: ${gevonden.naam}. Voeg het toe via Scannen.`,
+    { openbaar: { barcode, naam: gevonden.naam } },
+  );
+}
+
 export async function lijst(winkelId, { zoek: zoekterm } = {}) {
   const term = typeof zoekterm === "string" ? zoekterm.trim() : "";
   const producten = await Product.findAll({
@@ -61,11 +82,34 @@ export async function haal(winkelId, id) {
 }
 
 export async function maak(winkelId, invoer) {
+  const openbaar = invoer.uitOpenbareDatabase === true;
   const gegevens = {
     naam: controle.tekst(invoer.naam, "Naam", { max: 190 }),
     barcode: controle.barcode(invoer.barcode),
     productgroepId: (await controleerGroep(winkelId, invoer.productgroepId ?? null)) ?? null,
+    bron: openbaar ? "OPEN_FOOD_FACTS" : "EIGEN",
   };
+
+  if (gegevens.barcode && (await Product.findOne({ where: { winkelId, barcode: gegevens.barcode } }))) {
+    throw await barcodeBestaatAl(winkelId, gegevens.barcode);
+  }
+
+  if (openbaar) {
+    if (!gegevens.barcode) throw ongeldig("Een product uit de openbare database heeft een barcode nodig.");
+    let gevonden;
+    try {
+      gevonden = await opzoeken(gegevens.barcode);
+    } catch (fout) {
+      if (fout instanceof NietBereikbaar) {
+        throw new HttpFout(503, "De openbare database is nu niet bereikbaar. Probeer het straks opnieuw.");
+      }
+      throw fout;
+    }
+    if (!gevonden) throw ongeldig("Deze barcode staat niet in de openbare database.");
+  } else if (gegevens.barcode) {
+    const gevonden = await inOpenbareDatabase(gegevens.barcode);
+    if (gevonden) throw hoortBijOpenbaar(gegevens.barcode, gevonden);
+  }
 
   try {
     const product = await Product.create({ winkelId, ...gegevens });
@@ -80,7 +124,19 @@ export async function wijzig(winkelId, id, invoer) {
   const product = await zoek(winkelId, id);
   const gegevens = {};
   if (invoer.naam !== undefined) gegevens.naam = controle.tekst(invoer.naam, "Naam", { max: 190 });
-  if (invoer.barcode !== undefined) gegevens.barcode = controle.barcode(invoer.barcode);
+  if (invoer.barcode !== undefined) {
+    const barcode = controle.barcode(invoer.barcode);
+    if (barcode !== product.barcode) {
+      if (product.bron === "OPEN_FOOD_FACTS") {
+        throw ongeldig("De barcode van een product uit de openbare database kun je niet wijzigen.");
+      }
+      if (barcode) {
+        const gevonden = await inOpenbareDatabase(barcode);
+        if (gevonden) throw hoortBijOpenbaar(barcode, gevonden);
+      }
+      gegevens.barcode = barcode;
+    }
+  }
   const groep = await controleerGroep(winkelId, invoer.productgroepId);
   if (groep !== undefined) gegevens.productgroepId = groep;
 
@@ -110,7 +166,17 @@ export async function opBarcode(winkelId, code) {
   if (!barcode) throw ongeldig("Vul een barcode in.");
 
   const product = await Product.findOne({ where: { winkelId, barcode }, include: metGroep });
-  if (!product) return { barcode, product: null, plekken: [] };
+  if (!product) {
+    let openbaar = null;
+    let openbaarBereikbaar = true;
+    try {
+      openbaar = await opzoeken(barcode);
+    } catch (fout) {
+      if (!(fout instanceof NietBereikbaar)) throw fout;
+      openbaarBereikbaar = false;
+    }
+    return { barcode, product: null, plekken: [], openbaar, openbaarBereikbaar };
+  }
 
   const partijen = await Partij.findAll({
     where: { productId: product.id, status: "ACTIEF", vakId: { [Op.ne]: null } },
@@ -128,5 +194,11 @@ export async function opBarcode(winkelId, code) {
     });
   }
 
-  return { barcode, product: naarBuiten(product), plekken: [...perVak.values()] };
+  return {
+    barcode,
+    product: naarBuiten(product),
+    plekken: [...perVak.values()],
+    openbaar: null,
+    openbaarBereikbaar: true,
+  };
 }

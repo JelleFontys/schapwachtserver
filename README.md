@@ -31,6 +31,7 @@ kern/
   raster.js         rekenwerk aan de vloer (zonder database)
   stelling.js       rekenwerk aan kanten, rijen en vakken (zonder database)
   status.js         de statusregel: ruim, afprijzen of over de datum
+  openFoodFacts.js  producten opzoeken in de openbare database
   app.js            zet Express in elkaar (zonder te starten)
 modellen/           de tabellen en hun relaties
 middleware/         afscherming van routes
@@ -83,6 +84,22 @@ Een vak, een kant of een stelling krijgt de status van zijn
 productgroepen kan een latere datum al eerder oranje zijn. Een vals
 alarm is goedkoop, een gemist alarm is duur.
 
+## Open Food Facts
+
+Is een gescande barcode nog niet bekend in de winkel, dan zoekt de
+server hem op in [Open Food Facts](https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/),
+een gratis openbare productdatabase. De naam wordt dan voorgevuld; de
+medewerker controleert hem en kiest een productgroep. Zo'n product
+krijgt `bron: "OPEN_FOOD_FACTS"`, een zelf toegevoegd product
+`bron: "EIGEN"`.
+
+- Een eigen product met een barcode die in Open Food Facts staat, wordt
+  geweigerd (409). Dat product voeg je toe via Scannen.
+- De barcode van een product uit Open Food Facts ligt vast.
+- Open Food Facts staat 15 opvragingen per minuut toe. De server onthoudt
+  een uur wat hij al heeft opgevraagd.
+- Is Open Food Facts niet bereikbaar, dan werkt alles gewoon door zonder.
+
 ## API
 
 | | |
@@ -97,7 +114,7 @@ alarm is goedkoop, een gemist alarm is duur.
 | `GET`, `PATCH`, `DELETE /api/stellingen/:id` | Stelling bekijken, inrichten, weghalen |
 | `GET /api/stellingen/:id/inhoud` | Opengeklapt: rijen, vakken en wat erin ligt |
 | `GET /api/producten?zoek=` · `GET /api/producten/:id` | Producten zoeken op naam of barcode |
-| `GET /api/producten/barcode/:code` | Gescand product en waar het nu ligt |
+| `GET /api/producten/barcode/:code` | Gescand product en waar het nu ligt; onbekend lokaal, dan een voorstel uit Open Food Facts |
 | `POST`, `PATCH`, `DELETE /api/producten/:id` | Product maken, wijzigen, weghalen (weghalen: L) |
 | `GET`, `POST`, `PATCH`, `DELETE /api/productgroepen` | Productgroepen en afprijsregels (wijzigen: L) |
 | `POST /api/partijen` | Product met datum in een vak zetten |
@@ -201,6 +218,7 @@ Instellen onder Environment:
 | `CLIENT_URL` | `https://schapclient.web4ever.nl` |
 | `JWT_SECRET` | iets langs en willekeurigs |
 | `NODE_ENV` | `production` |
+| `OFF_USER_AGENT` | `SchapWacht/1.0 (jouw-mailadres)`, zodat Open Food Facts weet wie er vraagt |
 
 Domein: `schapserv.web4ever.nl`.
 

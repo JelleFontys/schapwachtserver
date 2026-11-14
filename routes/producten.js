@@ -33,7 +33,7 @@ router.get(
   }),
 );
 
-// POST /api/producten   { naam, barcode?, productgroepId? }
+// POST /api/producten   { naam, barcode?, productgroepId?, uitOpenbareDatabase? }
 router.post(
   "/",
   vangFouten(async (req, res) => {
