@@ -2,10 +2,11 @@ import { Op, UniqueConstraintError } from "sequelize";
 
 import { Product, Productgroep, Partij } from "../modellen/index.js";
 import { HttpFout, nietGevonden, ongeldig } from "../kern/hulp.js";
-import { afprijsDagenVan, statusVan } from "../kern/status.js";
+import { afprijsDagenVan, statusVan, vandaag, verschuif } from "../kern/status.js";
 import * as controle from "../kern/controle.js";
 import { NietBereikbaar, opzoeken } from "../kern/openFoodFacts.js";
 import { plekInclude, plekVan } from "./plek.js";
+import { aandachtPerProduct } from "./overzichtDienst.js";
 
 export const naarBuiten = (product) => ({
   id: product.id,
@@ -74,7 +75,9 @@ export async function lijst(winkelId, { zoek: zoekterm } = {}) {
     order: [["naam", "ASC"]],
     limit: 500,
   });
-  return producten.map(naarBuiten);
+  const tot = vandaag();
+  const letOp = await aandachtPerProduct(winkelId, verschuif(tot, -29), tot);
+  return producten.map((p) => ({ ...naarBuiten(p), letOp: letOp.has(p.id) }));
 }
 
 export async function haal(winkelId, id) {

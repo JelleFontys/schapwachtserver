@@ -2,7 +2,7 @@ import { Router } from "express";
 
 import { vangFouten } from "../kern/hulp.js";
 import { ingelogd, alleenLeidinggevende } from "../middleware/ingelogd.js";
-import { weggegooid } from "../diensten/overzichtDienst.js";
+import { aandacht, weggegooid } from "../diensten/overzichtDienst.js";
 
 const router = Router();
 router.use(ingelogd, alleenLeidinggevende);
@@ -12,6 +12,14 @@ router.get(
   "/weggegooid",
   vangFouten(async (req, res) => {
     res.json(await weggegooid(req.gebruiker.winkelId, req.query));
+  }),
+);
+
+// GET /api/overzicht/aandacht?van=2026-11-01&tot=2026-11-30
+router.get(
+  "/aandacht",
+  vangFouten(async (req, res) => {
+    res.json(await aandacht(req.gebruiker.winkelId, req.query));
   }),
 );
 

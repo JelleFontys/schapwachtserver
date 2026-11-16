@@ -32,6 +32,7 @@ kern/
   stelling.js       rekenwerk aan kanten, rijen en vakken (zonder database)
   status.js         de statusregel: ruim, afprijzen of over de datum
   openFoodFacts.js  producten opzoeken in de openbare database
+  aandacht.js       wanneer een product te vaak wordt weggegooid
   app.js            zet Express in elkaar (zonder te starten)
 modellen/           de tabellen en hun relaties
 middleware/         afscherming van routes
@@ -123,6 +124,7 @@ krijgt `bron: "OPEN_FOOD_FACTS"`, een zelf toegevoegd product
 | `POST /api/vakken/:id/leegmelden` | Alles in een vak in één keer afmelden |
 | `GET /api/werklijst` | Alle actieve producten, kortst houdbaar bovenaan |
 | `GET /api/overzicht/weggegooid?van=&tot=` | Weggegooid per productgroep (L) |
+| `GET /api/overzicht/aandacht?van=&tot=` | Producten die vaak worden weggegooid, met een advies (L) |
 
 Alles behalve registreren en inloggen vraagt een token. (L) betekent:
 alleen de leidinggevende. Stellingen neerzetten, inrichten en weghalen

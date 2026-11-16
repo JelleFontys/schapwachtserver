@@ -4,6 +4,7 @@ import { Partij, Product, Productgroep } from "../modellen/index.js";
 import { ongeldig } from "../kern/hulp.js";
 import { datumVan, dagenTussen, vandaag, verschuif } from "../kern/status.js";
 import * as controle from "../kern/controle.js";
+import { beoordeel } from "../kern/aandacht.js";
 
 const STANDAARD_PERIODE = 30;
 const MAX_PERIODE = 366;
@@ -85,4 +86,75 @@ export async function weggegooid(winkelId, invoer) {
     },
     groepen: rijen,
   };
+}
+
+async function afgemeldIn(winkelId, van, tot) {
+  const partijen = await Partij.findAll({
+    where: {
+      status: "AFGEMELD",
+      afgemeldOp: {
+        [Op.gte]: new Date(`${verschuif(van, -1)}T00:00:00Z`),
+        [Op.lt]: new Date(`${verschuif(tot, 2)}T00:00:00Z`),
+      },
+    },
+    include: [
+      {
+        model: Product,
+        required: true,
+        where: { winkelId },
+        attributes: ["id", "naam"],
+        include: [{ model: Productgroep, attributes: ["id", "naam", "afprijsDagen"] }],
+      },
+    ],
+  });
+  return partijen.filter((p) => {
+    const dag = datumVan(p.afgemeldOp);
+    return dag >= van && dag <= tot;
+  });
+}
+
+// Per product: hoe vaak weggegooid, uitverkocht en gestickerd, en of
+// het aandacht verdient (kern/aandacht.js).
+export async function aandachtPerProduct(winkelId, van, tot) {
+  const perProduct = new Map();
+  for (const partij of await afgemeldIn(winkelId, van, tot)) {
+    const product = partij.Product;
+    if (!perProduct.has(product.id)) {
+      perProduct.set(product.id, {
+        product: {
+          id: product.id,
+          naam: product.naam,
+          productgroep: product.Productgroep
+            ? { id: product.Productgroep.id, naam: product.Productgroep.naam, afprijsDagen: product.Productgroep.afprijsDagen }
+            : null,
+        },
+        weggegooid: 0,
+        uitverkocht: 0,
+        gestickerd: 0,
+        stuksWeggegooid: 0,
+      });
+    }
+    const rij = perProduct.get(product.id);
+    if (partij.uitkomst === "WEGGEGOOID") {
+      rij.weggegooid += 1;
+      rij.stuksWeggegooid += partij.aantal ?? 0;
+    }
+    if (partij.uitkomst === "UITVERKOCHT") rij.uitverkocht += 1;
+    if (partij.uitkomst === "GESTICKERD") rij.gestickerd += 1;
+  }
+
+  const uitkomst = new Map();
+  for (const [id, rij] of perProduct) {
+    const oordeel = beoordeel(rij);
+    if (oordeel) uitkomst.set(id, { ...rij, ...oordeel });
+  }
+  return uitkomst;
+}
+
+export async function aandacht(winkelId, invoer) {
+  const { van, tot } = periode(invoer);
+  const producten = [...(await aandachtPerProduct(winkelId, van, tot)).values()].sort(
+    (a, b) => b.aandeel - a.aandeel || b.weggegooid - a.weggegooid || a.product.naam.localeCompare(b.product.naam),
+  );
+  return { van, tot, producten };
 }

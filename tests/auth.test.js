@@ -103,6 +103,7 @@ describe("beveiligde routes", () => {
     ["post", "/api/vakken/11111111-1111-4111-8111-111111111111/leegmelden"],
     ["get", "/api/werklijst"],
     ["get", "/api/overzicht/weggegooid"],
+    ["get", "/api/overzicht/aandacht"],
     ["patch", "/api/winkel/medewerkers/11111111-1111-4111-8111-111111111111"],
   ])("geeft 401 op %s %s zonder token", async (methode, pad) => {
     const r = await request(app)[methode](pad).send({ naam: "Winkel" });

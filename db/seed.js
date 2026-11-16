@@ -172,11 +172,39 @@ async function main() {
 
     await Partij.bulkCreate(partijen, { transaction: t, validate: true });
 
+    // Geschiedenis, zodat het overzicht en "Let op" iets laten zien:
+    // kipfilet wordt vaak weggegooid ondanks stickeren, yoghurt wordt
+    // nooit verkocht, brood gaat meestal goed.
+    const afgemeld = (naam, dagenGeleden, uitkomst, aantal) => ({
+      productId: producten.get(naam),
+      vakId: null,
+      houdbaarTot: overDagen(-dagenGeleden),
+      aantal,
+      status: "AFGEMELD",
+      uitkomst,
+      afgemeldOp: new Date(`${overDagen(-dagenGeleden)}T09:00:00Z`),
+    });
+    const geschiedenis = [
+      afgemeld("Gerookte kipfilet 150g", 3, "WEGGEGOOID", 4),
+      afgemeld("Gerookte kipfilet 150g", 8, "WEGGEGOOID", 5),
+      afgemeld("Gerookte kipfilet 150g", 12, "GESTICKERD", 6),
+      afgemeld("Gerookte kipfilet 150g", 17, "WEGGEGOOID", 3),
+      afgemeld("Volle yoghurt 500g", 5, "WEGGEGOOID", 6),
+      afgemeld("Volle yoghurt 500g", 14, "WEGGEGOOID", 8),
+      afgemeld("Volle yoghurt 500g", 22, "WEGGEGOOID", 5),
+      afgemeld("Tarwebrood heel", 2, "UITVERKOCHT", 4),
+      afgemeld("Tarwebrood heel", 4, "GESTICKERD", 3),
+      afgemeld("Tarwebrood heel", 6, "WEGGEGOOID", 2),
+      afgemeld("Tarwebrood heel", 9, "UITVERKOCHT", 4),
+    ];
+    await Partij.bulkCreate(geschiedenis, { transaction: t, validate: true });
+
     console.log("Testdata geplaatst:");
     console.log("  winkel       Parkshop De Vlinderhoeve (code DEMO-2026)");
     console.log("  gebruikers   sanne@voorbeeld.nl en tim@voorbeeld.nl, wachtwoord Demo1234!");
     console.log("  plattegrond  Winkel, 10x20, met 3 stellingen");
     console.log(`  partijen     ${partijen.length}, waarvan 1 zonder plek`);
+    console.log(`  geschiedenis ${geschiedenis.length} afgemelde partijen`);
   });
 
   await sequelize.close();
